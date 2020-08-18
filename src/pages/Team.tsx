@@ -65,7 +65,7 @@ export default (props: {
     const team = getTeamByIdResult.data.teams_by_pk
 
     return (
-      <div className='flex-1'>
+      <div className='flex-1 border-r-2 border-gray-100'>
         <div className='bg-white px-8 py-4 flex justify-between border-b-2 border-gray-100'>
           <div>
             <h1 className='font-bold'>
@@ -121,13 +121,14 @@ export default (props: {
                 </div>
 
                 <div className='mt-8 flex'>
-                  <button disabled={createDocResult.fetching} className='flex-1 px-8 py-2 bg-blueGray-500 border-blueGray-500 border-2 text-gray-100 text-sm rounded-full font-bold mr-4'>
+
+                  <button onClick={_ => teardownModal()} className='flex-1 px-8 py-2 text-blueGray-500 border-blueGray-500 border-2 text-sm rounded-full font-bold box-border mr-4'>
+                    Cancel
+                  </button>
+                  <button disabled={createDocResult.fetching} className='flex-1 px-8 py-2 bg-blueGray-500 border-blueGray-500 border-2 text-gray-100 text-sm rounded-full font-bold'>
                     Create
                   </button>
 
-                  <button onClick={_ => teardownModal()} className='flex-1 px-8 py-2 text-blueGray-500 border-blueGray-500 border-2 text-sm rounded-full font-bold box-border'>
-                    Cancel
-                  </button>
 
                 </div>
               </form>
@@ -164,32 +165,37 @@ function DocList(props: {
 }) {
   const history = useHistory()
 
-  return <table className='table-fixed w-full bg-white rounded-lg'>
-    <thead>
-      <tr className='text-left text-gray-500 text-sm'>
-        <th className='px-8 py-4'>Title</th>
-        <th className='px-8 py-4'>Visibility</th>
-        <th className='px-8 py-4'>Created</th>
-      </tr>
-    </thead>
-    <tbody className='shadow-xl rounded-lg'>
-      {props.docs.map((doc, index) => {
-        return (
-          <tr onClick={_ => history.push(`/doc/${doc.id}`)} key={doc.id} className={classnames('text-blueGray-900 hover:text-gray-500 animate cursor-pointer', { 'bg-gray-50': index % 2 === 0 })}>
-            <td className='px-8 py-4'>
-              {doc.title}
-            </td>
-            <td className='px-8 py-4'>
-              {doc.visibility === 'private' ? <Lock /> : <></>}
-            </td>
-            <td className='px-8 py-4'>
-              {new Date(doc.created_at).toLocaleDateString()}
-            </td>
-          </tr>
-        )
-      })}
-    </tbody>
-  </table>
+  return <div>
+    <table className='table-fixed w-full bg-white rounded-lg'>
+      <thead>
+        <tr className='text-left text-gray-500 text-sm'>
+          <th className='px-8 py-4'>Title</th>
+          <th className='px-8 py-4'>Visibility</th>
+          <th className='px-8 py-4'>Created</th>
+        </tr>
+      </thead>
+      <tbody className='shadow-xl rounded-lg'>
+        {props.docs.map((doc, index) => {
+          return (
+            <tr onClick={_ => history.push(`/doc/${doc.id}`)} key={doc.id} className={classnames('text-blueGray-900 hover:text-gray-500 animate cursor-pointer', { 'bg-gray-50': index % 2 === 0 })}>
+              <td className='px-8 py-4'>
+                {doc.title}
+              </td>
+              <td className='px-8 py-4'>
+                {doc.visibility === 'private' ? <Lock /> : <></>}
+              </td>
+              <td className='px-8 py-4'>
+                {new Date(doc.created_at).toLocaleDateString()}
+              </td>
+            </tr>
+          )
+        })}
+      </tbody>
+    </table>
+    {props.docs.length === 0 && <div className='text-center py-8 text-gray-500 bg-gray-100'>
+      No document
+      </div>}
+  </div>
 }
 
 function DocSettings(props: {

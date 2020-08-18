@@ -421,3 +421,42 @@ mutation($pageId: uuid!) {
   }
 }
 `
+
+
+export type GetUserInfoParams = {
+  userId: string
+}
+export type GetUserInfoResult = {
+  users_by_pk: {
+    id: string, username: string, email: string, auth_service?: string
+  }
+}
+
+export const GetUserInfo = `
+query($userId:uuid!) {
+	users_by_pk(id: $userId)  {
+    id, username, email, auth_service
+  }
+}
+`
+
+export type UpdateUserInfoParams = {
+  userId: string,
+  input: {
+    username: string
+  }
+}
+export type UpdateUserInfoResult = {
+  update_users_by_pk: {
+    id: string
+  }
+}
+export const UpdateUserInfo = `
+mutation($userId:uuid!, $input: users_set_input!) {
+  update_users_by_pk(pk_columns:{
+    id: $userId
+  }, _set: $input) {
+    id
+  }
+}
+`

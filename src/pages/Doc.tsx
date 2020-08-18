@@ -11,6 +11,8 @@ import Select from 'react-select'
 import { DragDropContext, Draggable, Droppable } from 'react-beautiful-dnd'
 import { client } from '../client'
 import { nanoid } from 'nanoid'
+declare var process
+
 export default (props: RouteComponentProps<{ docId: string }>) => {
 
   const docId = props.match.params.docId
@@ -88,7 +90,7 @@ export default (props: RouteComponentProps<{ docId: string }>) => {
           </div>
 
           <div className='text-xs mt-1 text-gray-500'>
-            https://docs.docmate.io/{doc.id}
+            { process.env.DOC_DOMAIN ? `${process.env.DOC_DOMAIN}/${doc.id}` : `${location.protocol}/${location.host}/${doc.id}` }
           </div>
 
         </div>
