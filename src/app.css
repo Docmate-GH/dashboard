@@ -21,11 +21,11 @@ form label {
 }
 
 form input[type='text'] {
-  @apply bg-gray-50 animate rounded-lg px-4 py-2 text-sm;
+  @apply bg-gray-50 animate rounded-lg px-2 py-2 text-sm;
 }
 
 form select {
-  @apply bg-gray-50 animate rounded-lg px-4 py-2 text-sm;
+  @apply bg-gray-50 animate rounded-lg px-2 py-2 text-sm;
 }
 
 
@@ -34,3 +34,7 @@ form .btn {
 }
 
 .CodeMirror { height: 100% !important; }
+
+.ReactModal__Overlay {
+  background-color: rgba(0, 0, 0, .2) !important;
+}

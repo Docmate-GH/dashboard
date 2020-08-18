@@ -3,6 +3,9 @@ import * as React from 'react'
 import { render } from 'react-dom'
 import Home from './pages/Home'
 import 'biu.js/dist/biu.css'
+import Modal from 'react-modal'
+
+Modal.setAppElement(document.querySelector('#root'))
 
 import {
   BrowserRouter as Router,
@@ -19,14 +22,7 @@ const App = () => {
   return (
     <Provider value={client} >
       <Router>
-        <Home>
-          <Switch>
-            <Route path='/team/:teamId' component={Team}>
-            </Route>
-            <Route path='/doc/:docId' component={Doc}>
-            </Route>
-          </Switch>
-        </Home>
+        <Home />
       </Router>
     </Provider>
   )

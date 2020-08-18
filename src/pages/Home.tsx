@@ -6,7 +6,8 @@ import Team from './Team'
 import { useQuery } from 'urql'
 import { GetUserTeamParams, GetUserTeams, GetUserTeamsResult } from '../gql'
 import { userService } from '../service'
-import { Link } from 'react-router-dom'
+import { Link, Route, Switch, useRouteMatch } from 'react-router-dom'
+import Doc from './Doc'
 
 function NavItem(props: {
   children: any,
@@ -37,7 +38,6 @@ function NavItem(props: {
 export default ({
   children,
 }) => {
-
   // @ts-expect-error
   const [getUserTeamsResult, getUserTeams] = useQuery<GetUserTeamsResult, GetUserTeamParams>({ query: GetUserTeams, variables: { userId: userService.getUserInfo()?.id }, pause: !userService.isLogin() })
 
@@ -83,7 +83,14 @@ export default ({
             </div>
           </nav>
         </div>
-        {children}
+
+        <Switch>
+          <Route path='/team/:teamId'>
+            <Team teams={teams} />
+          </Route>
+          <Route path='/doc/:docId' component={Doc}>
+          </Route>
+        </Switch>
       </div>
     )
   }
