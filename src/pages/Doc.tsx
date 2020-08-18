@@ -1,11 +1,12 @@
 import { useFormik } from 'formik'
 import * as React from 'react'
-import { Route, RouteComponentProps, Switch, useHistory, Link, RouteProps } from 'react-router-dom'
-import { useQuery } from 'urql'
-import { Lock } from '../components/Icon'
-import { GetDocById, GetDocByIdParams, GetDocByIdResult, GetPageByDocIdAndSlug, GetPageByDocIdAndSlugParams, GetPageByDocIdAndSlugResult } from '../gql'
+import { Route, RouteComponentProps, Switch, useHistory, Link, RouteProps, Redirect } from 'react-router-dom'
+import { useMutation, useQuery } from 'urql'
+import { Lock, SaveIcon, TrashIcon } from '../components/Icon'
+import { EditPage, EditPageParams, EditPageResult, GetDocById, GetDocByIdParams, GetDocByIdResult, GetPageByDocIdAndSlug, GetPageByDocIdAndSlugParams, GetPageByDocIdAndSlugResult, UpdateDoc, UpdateDocParams, UpdateDocResult } from '../gql'
 import classnames from 'classnames'
 import { useImportScript } from '../utils'
+import biu from 'biu.js'
 
 export default (props: RouteComponentProps<{ docId: string }>) => {
 
@@ -43,65 +44,70 @@ export default (props: RouteComponentProps<{ docId: string }>) => {
           </div>
 
         </div>
-        <div className='self-center flex'>
-          <Link to={`/doc/${docId}/settings`} className='self-center mr-4 cursor-pointer'>
-            Settings
-          </Link>
-
-          <a className='bg-blueGray-500 text-gray-100 rounded-full px-4 text-sm font-bold py-2 cursor-pointer '>New Page</a>
-        </div>
       </div>
 
+      <div className='flex flex-1'>
+        <div className='w-64 border-gray-50'>
+          <h1 className='px-4 text-sm font-bold uppercase pt-4 text-blueGray-500'>
+            Document
+          </h1>
+
+          <Link className={classnames('text-sm m-2 px-4 py-2 hover:bg-blueGray-50 cursor-pointer animate rounded block', { 'bg-blueGray-50': history.location.pathname.split('/').pop() === 'settings' })} to={`/doc/${doc.id}/settings`}>Settings</Link>
+
+          <h1 className='px-4 text-sm font-bold uppercase pt-4 text-blueGray-500'>
+            Pages
+          </h1>
+          <nav>
+            {doc.pages.map(page => {
+              return (
+                <Link key={page.id} className={classnames('text-sm m-2 px-4 py-2 hover:bg-blueGray-50 cursor-pointer animate rounded block', { 'bg-blueGray-50': history.location.pathname.split('/').pop() === page.slug })} to={`/doc/${doc.id}/page/${page.slug}`}>{page.title}</Link>
+              )
+            })}
+          </nav>
+        </div>
+
+        <div className='flex-1 h-full flex'>
+          <Switch>
+            <Route path='/doc/:docId/settings' exact>
+              <Settings doc={doc} />
+            </Route>
+            <Route path='/doc/:docId/page/:pageSlug' component={Editor} exact>
+            </Route>
+            <Route path='/doc/:docId' exact>
+              <Redirect to={`/doc/${doc.id}/settings`} />
+            </Route>
+          </Switch>
+        </div>
+
+      </div>
+      {/* 
       <Switch>
         <Route path='/doc/:docId/settings' exact>
           <Settings doc={doc} />
         </Route>
-        <Route path='/doc/:docId'>
-          <Pages doc={doc} />
-        </Route>
 
-      </Switch>
+      </Switch> */}
     </div>
   )
 }
 
-function Pages(props: {
-  doc: GetDocByIdResult['doc_by_pk']
-}) {
-  const pages = props.doc.pages
-  const history = useHistory()
-  return (
-    <div className='flex flex-1'>
-      <div className='w-64 border-gray-50'>
-        <h1 className='px-4 text-sm font-bold uppercase pt-4 text-blueGray-500'>
-          Pages
-      </h1>
-        <nav>
-          {pages.map(page => {
-            return (
-              <Link key={page.id} className={classnames('my-2 mx-2 px-4 py-2 hover:bg-blueGray-50 cursor-pointer animate rounded block', { 'bg-blueGray-50': history.location.pathname.split('/').pop() === page.slug })} to={`/doc/${props.doc.id}/page/${page.slug}`}>{page.title}</Link>
-            )
-          })}
-        </nav>
-      </div>
+// function Pages(props: {
+//   doc: GetDocByIdResult['doc_by_pk']
+// }) {
+//   const pages = props.doc.pages
+//   const history = useHistory()
+//   return (
 
-      <div className='flex-1 h-full flex'>
-        <Switch>
-          <Route path='/doc/:docId/page/:pageSlug' component={Editor} exact>
-          </Route>
-        </Switch>
-      </div>
-    </div>
-  )
-}
+//   )
+// }
 
 function Editor(props: RouteComponentProps<{ docId: string, pageSlug: string }>) {
-
-  // const { fetching: fetchingCM, error: fetchCMError } = useImportScript('//cdn.jsdelivr.net/npm/codemirror@5.56.0/lib/codemirror.js')
 
   const { docId, pageSlug } = props.match.params
 
   const [getPageByIdResult] = useQuery<GetPageByDocIdAndSlugResult, GetPageByDocIdAndSlugParams>({ query: GetPageByDocIdAndSlug, variables: { pageSlug, docId } })
+  const [editPageResult, editPage] = useMutation<EditPageResult, EditPageParams>(EditPage)
+
 
   const form = useFormik({
     enableReinitialize: true,
@@ -109,8 +115,20 @@ function Editor(props: RouteComponentProps<{ docId: string, pageSlug: string }>)
       title: getPageByIdResult.data?.page[0].title,
       content: getPageByIdResult.data?.page[0].content
     },
-    onSubmit(values) {
-
+    async onSubmit(values) {
+      // TODO: verify
+      try {
+        await editPage({
+          docId, pageSlug, input: {
+            title: values.title!,
+            content: values.content!
+          }
+        })
+        biu('Save', { type: 'success' })
+        location.reload()
+      } catch (e) {
+        biu('Error', { type: 'danger' })
+      }
     }
   })
 
@@ -133,11 +151,23 @@ function Editor(props: RouteComponentProps<{ docId: string, pageSlug: string }>)
   const page = getPageByIdResult.data!.page[0]
 
   return (
-    <div className='p-4 flex flex-col w-full'>
-      <input name='title' onChange={form.handleChange} className='outline-none w-full text-2xl font-bold' type="text" placeholder='Title' value={form.values.title} />
+    <>
+      <div className='p-4 flex flex-col w-full'>
+        <input name='title' onChange={form.handleChange} className='outline-none w-full text-2xl font-bold' type="text" placeholder='Title' value={form.values.title} />
 
-      <CM value={form.values.content} />
-    </div>
+        <CM value={form.values.content} />
+      </div>
+
+      <div className='w-16 border-l-2 border-gray-100'>
+        <a onClick={form.submitForm} className='block bg-blueGray-500 w-10 h-10 mx-auto rounded cursor-pointer hover:bg-blueGray-700 animate mt-2 flex justify-center text-gray-100'>
+          <SaveIcon />
+        </a>
+
+        <a className='block bg-red-700 w-10 h-10 mx-auto rounded cursor-pointer hover:bg-red-900 animate mt-2 flex justify-center text-gray-100'>
+          <TrashIcon />
+        </a>
+      </div>
+    </>
   )
 }
 
@@ -168,22 +198,44 @@ function CM(props: {
   )
 }
 
+const description = {
+  docute: <span><a className='underline' href="https://docute.org" target="_blank">Docute</a> is a Vue-based document generator. It allows you to write Vue component in Markdown. </span>,
+  docsify: <span><a className='underline' href="https://docsify.js.org" target="_blank">Docsify</a> is a lightweight document site generator. It has a lots of community plugins and themes.</span>
+}
+
 function Settings(props: {
   doc: GetDocByIdResult['doc_by_pk']
 }) {
+
+  const [udpateDocResult, updateDoc] = useMutation<UpdateDocResult, UpdateDocParams>(UpdateDoc)
+
   const form = useFormik({
     initialValues: {
       title: props.doc.title,
       highlights: props.doc.code_highlights,
-      visibility: props.doc.visibility
+      visibility: props.doc.visibility,
+      template: props.doc.template
     },
-    onSubmit() {
-
+    async onSubmit(values) {
+      try {
+        await updateDoc({
+          docId: props.doc.id,
+          input: {
+            visibility: values.visibility,
+            code_highlights: values.highlights,
+            title: values.title,
+            template: values.template
+          }
+        })
+        biu('Save', { type: 'success' })
+      } catch (e) {
+        biu('Error', { type: 'danger' })
+      }
     }
   })
 
   return (
-    <div className='p-8'>
+    <div className='px-8 py-4 w-full'>
       <form>
         <div className='flex flex-col'>
           <label htmlFor="title">Document Title</label>
@@ -204,9 +256,38 @@ function Settings(props: {
           </select>
         </div>
 
+        <div className='flex flex-col mt-8'>
+          <label htmlFor="template">Template</label>
+          <div className='flex -mx-2'>
+
+            <div onClick={_ => form.setFieldValue('template', 'docute')} className={classnames('mx-2 inline-block border border-gray-200 hover:bg-blueGray-50 w-40 p-4 rounded-lg flex justify-center animate cursor-pointer', { 'bg-blueGray-50 border-none': form.values.template === 'docute' })}>
+              <div className='text-center'>
+                {/* <img className='w-12 h-12' src={require('../assets/docute.png')} alt="" /> */}
+                <span style={{ zoom: 2 }}>📚</span>
+                <h1 className='text-sm'>Docute</h1>
+              </div>
+            </div>
+            <div onClick={_ => form.setFieldValue('template', 'docsify')} className={classnames('mx-2 inline-block border border-gray-200 hover:bg-blueGray-50 w-40 p-4 rounded-lg flex justify-center animate cursor-pointer', { 'bg-blueGray-50 border-none': form.values.template === 'docsify' })}>
+              <div className=''>
+                <img className='w-12 h-12 mx-auto block' src={require('../assets/docsify.svg')} alt="" />
+
+                <div>
+                  <h1 className='text-center text-sm'>Docsify</h1>
+                </div>
+              </div>
+            </div>
+
+          </div>
+
+          <div className='text-xs text-gray-500 mt-4'>
+            {description[form.values.template]}
+          </div>
+
+        </div>
+
 
         <div className='mt-8'>
-          <a className='btn'>Save</a>
+          <a className='btn' onClick={form.submitForm}>Save</a>
         </div>
       </form>
     </div>

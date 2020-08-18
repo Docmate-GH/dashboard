@@ -21,11 +21,11 @@ form label {
 }
 
 form input[type='text'] {
-  @apply bg-gray-50 animate rounded-lg p-4;
+  @apply bg-gray-50 animate rounded-lg px-4 py-2 text-sm;
 }
 
 form select {
-  @apply bg-gray-50 animate rounded-lg p-4;
+  @apply bg-gray-50 animate rounded-lg px-4 py-2 text-sm;
 }
 
 

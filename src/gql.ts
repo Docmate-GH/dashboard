@@ -378,3 +378,37 @@ export const batchResortMutation = (ids: Array<string>) => {
       }      
       `
 }
+
+export type EditPageParams = {
+  docId: string,
+  pageSlug: string,
+  input: {
+    title: string,
+    content: string
+  }
+}
+export type EditPageResult = {
+  update_page: {
+    affected_rows: number
+  }
+}
+export const EditPage = `
+mutation($docId: uuid!, $pageSlug: String! $input: page_set_input!) {
+  update_page (where: {
+    doc_id: {_eq: $docId},
+    slug: {_eq:$pageSlug}
+  }, _set: $input){
+    affected_rows
+  }
+}
+`
+
+export const DeletePage = `
+mutation($pageId: uuid!) {
+  update_page_by_pk (_set:{
+    deleted_at: "now()"
+  }, pk_columns:{id: $pageId}) {
+    id
+  }
+}
+`
