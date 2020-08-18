@@ -4,6 +4,10 @@ module.exports = {
   plugins: [
     require('autoprefixer'),
     require('tailwindcss')({
+      purge: [
+        './src/**/*.html',
+        './src/**/*.tsx',
+      ],
       theme: {
         colors,
         variants: {

@@ -1,7 +1,8 @@
 {
   "scripts": {
     "dev": "parcel src/index.html",
-    "check": "tsc --noEmit --watch"
+    "check": "tsc --noEmit --watch",
+    "build": "parcel build src/index.html"
   },
   "devDependencies": {
     "@types/react": "^16.9.46",
