@@ -5,9 +5,9 @@ import { useMutation, useQuery } from 'urql'
 import { Lock, SaveIcon, TrashIcon } from '../components/Icon'
 import { EditPage, EditPageParams, EditPageResult, GetDocById, GetDocByIdParams, GetDocByIdResult, GetPageByDocIdAndSlug, GetPageByDocIdAndSlugParams, GetPageByDocIdAndSlugResult, UpdateDoc, UpdateDocParams, UpdateDocResult } from '../gql'
 import classnames from 'classnames'
-import { useImportScript } from '../utils'
+import { highlights, setFieldValue, useImportScript } from '../utils'
 import biu from 'biu.js'
-
+import Select from 'react-select'
 export default (props: RouteComponentProps<{ docId: string }>) => {
 
   const docId = props.match.params.docId
@@ -47,7 +47,7 @@ export default (props: RouteComponentProps<{ docId: string }>) => {
       </div>
 
       <div className='flex flex-1'>
-        <div className='w-64 border-gray-50'>
+        <div className='w-64 border-gray-50 pl-2'>
           <h1 className='px-4 text-sm font-bold uppercase pt-4 text-blueGray-500'>
             Document
           </h1>
@@ -212,9 +212,10 @@ function Settings(props: {
   const form = useFormik({
     initialValues: {
       title: props.doc.title,
-      highlights: props.doc.code_highlights,
+      highlights: props.doc.code_highlights.map(o => ({ label: o, value: o })),
       visibility: props.doc.visibility,
-      template: props.doc.template
+      template: props.doc.template,
+      defaultPage: props.doc.default_page
     },
     async onSubmit(values) {
       try {
@@ -222,9 +223,10 @@ function Settings(props: {
           docId: props.doc.id,
           input: {
             visibility: values.visibility,
-            code_highlights: values.highlights,
+            code_highlights: values.highlights.map(o => o.value),
             title: values.title,
-            template: values.template
+            template: values.template,
+            default_page: values.defaultPage
           }
         })
         biu('Save', { type: 'success' })
@@ -243,8 +245,19 @@ function Settings(props: {
         </div>
 
         <div className='flex flex-col mt-8'>
+          <label htmlFor="title">Home Page</label>
+          <select name="defaultPage" value={form.values.defaultPage} onChange={form.handleChange}>
+            {props.doc.pages.map(page => {
+              return (
+                <option value={page.slug} key={page.id}>{page.title}</option>
+              )
+            })}
+          </select>
+        </div>
+
+        <div className='flex flex-col mt-8'>
           <label htmlFor="highlights">Syntax Highlights</label>
-          <input type="text" />
+          <Select onChange={setFieldValue(form, 'highlights')} isMulti value={form.values.highlights} options={highlights} />
         </div>
 
         <div className='flex flex-col mt-8'>
@@ -287,7 +300,7 @@ function Settings(props: {
 
 
         <div className='mt-8'>
-          <a className='btn' onClick={form.submitForm}>Save</a>
+          <button disabled={udpateDocResult.fetching} className='btn' onClick={form.submitForm}>Save</button>
         </div>
       </form>
     </div>
