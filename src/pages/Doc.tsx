@@ -3,16 +3,20 @@ import * as React from 'react'
 import { Route, RouteComponentProps, Switch, useHistory, Link, RouteProps, Redirect } from 'react-router-dom'
 import { useMutation, useQuery } from 'urql'
 import { Lock, SaveIcon, TrashIcon } from '../components/Icon'
-import { EditPage, EditPageParams, EditPageResult, GetDocById, GetDocByIdParams, GetDocByIdResult, GetPageByDocIdAndSlug, GetPageByDocIdAndSlugParams, GetPageByDocIdAndSlugResult, UpdateDoc, UpdateDocParams, UpdateDocResult } from '../gql'
+import { batchResortMutation, EditPage, EditPageParams, EditPageResult, GetDocById, GetDocByIdParams, GetDocByIdResult, GetPageByDocIdAndSlug, GetPageByDocIdAndSlugParams, GetPageByDocIdAndSlugResult, UpdateDoc, UpdateDocParams, UpdateDocResult } from '../gql'
 import classnames from 'classnames'
 import { highlights, setFieldValue, useImportScript } from '../utils'
 import biu from 'biu.js'
 import Select from 'react-select'
+import { DragDropContext, Draggable, Droppable } from 'react-beautiful-dnd'
+import { client } from '../client'
 export default (props: RouteComponentProps<{ docId: string }>) => {
 
   const docId = props.match.params.docId
 
   const [getDocByIdResult] = useQuery<GetDocByIdResult, GetDocByIdParams>({ query: GetDocById, variables: { docId } })
+  const [reOrderedPage, setReorderedPage] = React.useState(null as null | GetDocByIdResult['doc_by_pk']['pages'])
+
   const history = useHistory()
 
 
@@ -29,6 +33,34 @@ export default (props: RouteComponentProps<{ docId: string }>) => {
   }
 
   const doc = getDocByIdResult.data!.doc_by_pk
+
+  async function onDragEnd(result) {
+    if (!result.destination) {
+      return
+    }
+
+    if (
+      result.destination.droppableId === result.source.droppableId &&
+      result.destination.index === result.source.index
+    ) {
+      return
+    }
+
+    const pages = Array.from(doc.pages)
+    const p = pages.find(page => page.id === result.draggableId)
+    pages.splice(result.source.index, 1)
+    pages.splice(result.destination.index, 0, p!)
+
+    const resortMutation = batchResortMutation(pages.map(page => page.id))
+
+    setReorderedPage(pages)
+
+    const resortResult = await client.mutation(resortMutation).toPromise()
+
+    if (resortResult.error) {
+      // TODO: resort error
+    }
+  }
 
   return (
 
@@ -57,13 +89,30 @@ export default (props: RouteComponentProps<{ docId: string }>) => {
           <h1 className='px-4 text-sm font-bold uppercase pt-4 text-blueGray-500'>
             Pages
           </h1>
-          <nav>
-            {doc.pages.map(page => {
-              return (
-                <Link key={page.id} className={classnames('text-sm m-2 px-4 py-2 hover:bg-blueGray-50 cursor-pointer animate rounded block', { 'bg-blueGray-50': history.location.pathname.split('/').pop() === page.slug })} to={`/doc/${doc.id}/page/${page.slug}`}>{page.title}</Link>
-              )
-            })}
-          </nav>
+          <DragDropContext onDragEnd={onDragEnd}>
+            <Droppable droppableId={doc.id}>
+              {provided => {
+                return (
+                  <>
+                    <nav ref={provided.innerRef} {...provided.droppableProps}>
+                      {doc.pages.map((page, index) => {
+                        return (
+                          <>
+                            <Draggable key={page.id} draggableId={page.id} index={index}>
+                              {provided => {
+                                return <Link {...provided.dragHandleProps} {...provided.draggableProps} ref={provided.innerRef} key={page.id} className={classnames('text-sm m-2 px-4 py-2 hover:bg-blueGray-50 cursor-pointer animate rounded block', { 'bg-blueGray-50': history.location.pathname.split('/').pop() === page.slug })} to={`/doc/${doc.id}/page/${page.slug}`}>{page.title}</Link>
+                              }}
+                            </Draggable>
+                          </>
+                        )
+                      })}
+                      {provided.placeholder}
+                    </nav>
+                  </>
+                )
+              }}
+            </Droppable>
+          </DragDropContext>
         </div>
 
         <div className='flex-1 h-full flex'>
@@ -181,7 +230,6 @@ function CM(props: {
 
   React.useEffect(() => {
     if (cm.current && props.value) {
-      console.log(props.value)
       cm.current.setValue(props.value)
     }
   }, [props.value])
