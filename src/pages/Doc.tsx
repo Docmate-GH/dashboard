@@ -2,20 +2,23 @@ import { useFormik } from 'formik'
 import * as React from 'react'
 import { Route, RouteComponentProps, Switch, useHistory, Link, RouteProps, Redirect } from 'react-router-dom'
 import { useMutation, useQuery } from 'urql'
-import { Lock, SaveIcon, TrashIcon } from '../components/Icon'
-import { batchResortMutation, EditPage, EditPageParams, EditPageResult, GetDocById, GetDocByIdParams, GetDocByIdResult, GetPageByDocIdAndSlug, GetPageByDocIdAndSlugParams, GetPageByDocIdAndSlugResult, UpdateDoc, UpdateDocParams, UpdateDocResult } from '../gql'
+import { Lock, PlusIcon, SaveIcon, TrashIcon } from '../components/Icon'
+import { batchResortMutation, CreatePage, CreatePageResult, DeletePage, DeletePageParams, DeletePageResult, EditPage, EditPageParams, EditPageResult, GetDocById, GetDocByIdParams, GetDocByIdResult, GetPageByDocIdAndSlug, GetPageByDocIdAndSlugParams, GetPageByDocIdAndSlugResult, UpdateDoc, UpdateDocParams, UpdateDocResult } from '../gql'
 import classnames from 'classnames'
 import { highlights, setFieldValue, useImportScript } from '../utils'
 import biu from 'biu.js'
 import Select from 'react-select'
 import { DragDropContext, Draggable, Droppable } from 'react-beautiful-dnd'
 import { client } from '../client'
+import { nanoid } from 'nanoid'
 export default (props: RouteComponentProps<{ docId: string }>) => {
 
   const docId = props.match.params.docId
 
   const [getDocByIdResult] = useQuery<GetDocByIdResult, GetDocByIdParams>({ query: GetDocById, variables: { docId } })
   const [reOrderedPage, setReorderedPage] = React.useState(null as null | GetDocByIdResult['doc_by_pk']['pages'])
+  const [createPageResult, createPage] = useMutation<CreatePageResult>(CreatePage)
+
 
   const history = useHistory()
 
@@ -62,6 +65,19 @@ export default (props: RouteComponentProps<{ docId: string }>) => {
     }
   }
 
+  async function onCreateNewPage() {
+    const res = await createPage({
+      object: {
+        doc_id: docId,
+        slug: nanoid(8),
+        content: ''
+      }
+    })
+    if (res.data) {
+      history.push(`/doc/${docId}/page/${res.data.insert_page_one.slug}`)
+    }
+  }
+
   return (
 
     <div className='border-r-2 border-gray-100 flex-1 h-full flex flex-col'>
@@ -86,8 +102,10 @@ export default (props: RouteComponentProps<{ docId: string }>) => {
 
           <Link className={classnames('text-sm m-2 px-4 py-2 hover:bg-blueGray-50 cursor-pointer animate rounded block', { 'bg-blueGray-50': history.location.pathname.split('/').pop() === 'settings' })} to={`/doc/${doc.id}/settings`}>Settings</Link>
 
-          <h1 className='px-4 text-sm font-bold uppercase pt-4 text-blueGray-500'>
+          <h1 className='px-4 text-sm font-bold uppercase pt-4 text-blueGray-500 flex justify-between'>
             Pages
+
+            <a className='cursor-pointer' onClick={onCreateNewPage}><PlusIcon /></a>
           </h1>
           <DragDropContext onDragEnd={onDragEnd}>
             <Droppable droppableId={doc.id}>
@@ -154,8 +172,11 @@ function Editor(props: RouteComponentProps<{ docId: string, pageSlug: string }>)
 
   const { docId, pageSlug } = props.match.params
 
+  const history = useHistory()
+
   const [getPageByIdResult] = useQuery<GetPageByDocIdAndSlugResult, GetPageByDocIdAndSlugParams>({ query: GetPageByDocIdAndSlug, variables: { pageSlug, docId } })
   const [editPageResult, editPage] = useMutation<EditPageResult, EditPageParams>(EditPage)
+  const [deletePageResult, deletePage] = useMutation<DeletePageResult, DeletePageParams>(DeletePage)
 
 
   const form = useFormik({
@@ -199,6 +220,15 @@ function Editor(props: RouteComponentProps<{ docId: string, pageSlug: string }>)
 
   const page = getPageByIdResult.data!.page[0]
 
+  async function onClickDelete() {
+    if (window.confirm('Are you sure delete this page?')) {
+      const res = await deletePage({
+        pageId: page.id
+      })
+      history.push(`/doc/${docId}`)
+    }
+  }
+
   return (
     <>
       <div className='p-4 flex flex-col w-full'>
@@ -212,7 +242,7 @@ function Editor(props: RouteComponentProps<{ docId: string, pageSlug: string }>)
           <SaveIcon />
         </a>
 
-        <a className='block bg-red-700 w-10 h-10 mx-auto rounded cursor-pointer hover:bg-red-900 animate mt-2 flex justify-center text-gray-100'>
+        <a onClick={_ => onClickDelete()} className='block bg-red-700 w-10 h-10 mx-auto rounded cursor-pointer hover:bg-red-900 animate mt-2 flex justify-center text-gray-100'>
           <TrashIcon />
         </a>
       </div>
@@ -229,8 +259,8 @@ function CM(props: {
   const cm = React.useRef<any>(null)
 
   React.useEffect(() => {
-    if (cm.current && props.value) {
-      cm.current.setValue(props.value)
+    if (cm.current) {
+      cm.current.setValue(props.value || '')
     }
   }, [props.value])
 

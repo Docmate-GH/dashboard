@@ -349,6 +349,7 @@ export type GetPageByDocIdAndSlugResult = {
   page: {
     title: string
     content: string
+    id: string
   }[]
 }
 export const GetPageByDocIdAndSlug = `
@@ -357,7 +358,7 @@ query($docId: uuid!, $pageSlug: String!) {
     slug: {  _eq: $pageSlug},
     doc_id: {_eq: $docId}
   }) {
-    content, title
+    content, title, id
   }
 }
 `
@@ -403,6 +404,14 @@ mutation($docId: uuid!, $pageSlug: String! $input: page_set_input!) {
 }
 `
 
+export type DeletePageParams = {
+  pageId: string
+}
+export type DeletePageResult = {
+  update_page_by_pk: {
+    id: string
+  }
+}
 export const DeletePage = `
 mutation($pageId: uuid!) {
   update_page_by_pk (_set:{
