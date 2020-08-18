@@ -1,0 +1,30 @@
+{
+  "scripts": {
+    "dev": "parcel src/index.html",
+    "check": "tsc --noEmit --watch"
+  },
+  "devDependencies": {
+    "@types/react": "^16.9.46",
+    "@types/react-dom": "^16.9.8",
+    "@types/react-router-dom": "^5.1.5",
+    "autoprefixer": "^9.8.6",
+    "parcel-bundler": "^1.12.4",
+    "typescript": "^3.9.7"
+  },
+  "dependencies": {
+    "@egoist/md-colors": "^1.2.2",
+    "axios": "^0.19.2",
+    "biu.js": "^1.2.0",
+    "classnames": "^2.2.6",
+    "core-js": "^3.6.5",
+    "formik": "^2.1.5",
+    "graphql": "^15.3.0",
+    "js-cookie": "^2.2.1",
+    "react": "^16.13.1",
+    "react-dom": "^16.13.1",
+    "react-router-dom": "^5.2.0",
+    "regenerator-runtime": "^0.13.7",
+    "tailwindcss": "^1.6.2",
+    "urql": "^1.10.0"
+  }
+}

@@ -1,0 +1,36 @@
+@tailwind base;
+
+@tailwind components;
+
+@tailwind utilities;
+
+html {
+  font-family: Open Sans,sans-serif;
+}
+
+.animate {
+  @apply transition-all duration-200;
+}
+
+.logo {
+  font-family: Rowdies,cursive;
+}
+
+form label {
+  @apply text-sm text-gray-500 mb-2;
+}
+
+form input[type='text'] {
+  @apply bg-gray-50 animate rounded-lg p-4;
+}
+
+form select {
+  @apply bg-gray-50 animate rounded-lg p-4;
+}
+
+
+form .btn {
+  @apply bg-blueGray-500 text-sm font-bold text-gray-100 px-8 py-2 cursor-pointer inline-block rounded-full box-border;
+}
+
+.CodeMirror { height: 100% !important; }
