@@ -4,11 +4,13 @@ import { Link, Route, RouteComponentProps, Switch, useHistory, useRouteMatch } f
 import { History } from 'history'
 import { formatDocument, useMutation, useQuery } from 'urql'
 import { Lock, TeamIcon } from '../components/Icon'
-import { CreateDoc, CreateDocParams, CreateDocResult, GetDocById, GetDocByIdResult, GetTeamById, GetTeamByIdParams, GetTeamByIdResult, GetTeamDocsParams, GetUserTeamsResult, UpdateTeamInfo, UpdateTeamInfoParams, UpdateTeamInfoResult } from '../gql'
+import { CreateDoc, CreateDocParams, CreateDocResult, GetDocById, GetDocByIdResult, GetTeamById, GetTeamByIdParams, GetTeamByIdResult, GetTeamDocsParams, GetTeamFullInfo, GetTeamFullInfoParams, GetTeamFullInfoResult, GetUserTeamsResult, RemoveMember, RemoveMemberParams, RemoveMemberReuslt, RevokeInviteId, RevokeInviteIdParams, RevokeInviteIdResult, UpdateTeamInfo, UpdateTeamInfoParams, UpdateTeamInfoResult } from '../gql'
 import classnames from 'classnames'
 import { useFormik } from 'formik'
 import biu from 'biu.js'
 import Modal from 'react-modal'
+import { client } from '../client'
+import { userService } from '../service'
 
 export default (props: {
   teams: GetUserTeamsResult['users_by_pk']['user_teams']
@@ -138,7 +140,7 @@ export default (props: {
 
         <nav className='mt-8 px-8 text-sm'>
           <span className={classnames('border-blueGray-500 pb-2 mr-8', { 'border-b-4': path[path.length - 1] === teamId })}><Link to={`/team/${teamId}`}>Documents</Link></span>
-          <span className={classnames('border-blueGray-500 pb-2 mr-8', { 'border-b-4': path[path.length - 1] === 'settings' })}><Link to={`/team/${teamId}/settings`}>Settings</Link></span>
+          {team.master === userService.getUserInfo()?.id && <span className={classnames('border-blueGray-500 pb-2 mr-8', { 'border-b-4': path[path.length - 1] === 'settings' })}><Link to={`/team/${teamId}/settings`}>Settings</Link></span>}
         </nav>
 
         <div className='mt-10 px-8'>
@@ -146,9 +148,9 @@ export default (props: {
             <Route path='/team/:teamId' exact>
               <DocList docs={team.docs} />
             </Route>
-            <Route path='/team/:teamId/settings' exact>
+            {team.master === userService.getUserInfo()?.id && <Route path='/team/:teamId/settings' exact>
               <DocSettings team={team} />
-            </Route>
+            </Route>}
           </Switch>
         </div>
       </div>
@@ -202,6 +204,7 @@ function DocSettings(props: {
   team: GetTeamByIdResult['teams_by_pk']
 }) {
 
+  const [getTeamFullInfoResult, getTeamfullInfo] = useQuery<GetTeamFullInfoResult, GetTeamFullInfoParams>({ query: GetTeamFullInfo, variables: { teamId: props.team.id } })
   const [updateTeamInfoResult, updateTeamInfo] = useMutation<UpdateTeamInfoResult, UpdateTeamInfoParams>(UpdateTeamInfo)
 
   const form = useFormik({
@@ -223,17 +226,82 @@ function DocSettings(props: {
     }
   })
 
+  if (getTeamFullInfoResult.fetching) {
+    return <div>
+
+    </div>
+  }
+
+  if (getTeamFullInfoResult.error) {
+    return <div>
+
+    </div>
+  }
+
+  const teamFullInfo = getTeamFullInfoResult.data!.teams_by_pk
+
+  async function onClickRemoveMember(user: GetTeamFullInfoResult['teams_by_pk']['team_users'][0]) {
+    if (window.confirm(`Are you sure remove member ${user.user.username}`)) {
+      const removeMemberResult = await client.mutation<RemoveMemberReuslt, RemoveMemberParams>(RemoveMember, { teamId: props.team.id, userId: user.user.id }).toPromise()
+
+      if (!removeMemberResult.error) {
+        biu('Remove member success', { type: 'success' })
+        location.reload()
+      } else {
+        // TODO:
+      }
+    }
+  }
+
+  async function onClickRevokeInviteId() {
+    const updateResult = await client.mutation<RevokeInviteIdResult, RevokeInviteIdParams>(RevokeInviteId, { teamId: props.team.id }).toPromise()
+    if (!updateResult.error) {
+      biu('Revoke success', { type: 'success' })
+      location.reload()
+    } else {
+      // TODO:
+    }
+  }
+
+
   return (
-    <form>
-      <div className='flex flex-col'>
-        <label htmlFor="title">Team name</label>
-        <input value={form.values.title} onChange={form.handleChange} name="title" type="text" placeholder='An awesome document' />
-      </div>
+    <>
+      <form>
+        <h1 className='font-bold mb-4'>Basic</h1>
+        <div className='flex flex-col'>
+          <label htmlFor="title">Team name</label>
+          <input value={form.values.title} onChange={form.handleChange} name="title" type="text" placeholder='An awesome document' />
+        </div>
 
 
+        <div className='mt-4'>
+          <a onClick={form.submitForm} className='btn'>Save</a>
+        </div>
+      </form>
       <div className='mt-8'>
-        <a onClick={form.submitForm} className='btn'>Save</a>
+        <h1 className='font-bold'>Members</h1>
+
+        <div className='mt-4'>
+          <small className='mb-2 font-bold block text-gray-500'>Inviting member via link:</small>
+          <div className='flex'>
+            <input className='mr-2 px-3 py-1 text-sm flex-1 text-gray-500' type="text" disabled value={`${location.protocol}//${location.host}/join/${teamFullInfo.invite_id}`} />
+            <button onClick={onClickRevokeInviteId} className='border-2 border-blueGray-500 text-blueGray-500 hover:text-white hover:bg-blueGray-500 animate text-sm px-6 font-bold py-2 rounded-full'>Revoke</button>
+          </div>
+
+        </div>
+
+        <div className='mt-8'>
+          {teamFullInfo.team_users.map(user => {
+            return (
+              <div className='flex mb-4'>
+                <img className='block self-center rounded-full w-8 h-8 bg-gray-100 mr-2' src={user.user.avatar} alt="avatar" />
+                <span className='self-center text-sm'>{user.user.username}</span>
+                { user.user.id !== props.team.master ? <button onClick={_ => onClickRemoveMember(user)} className='text-sm ml-2 underline text-gray-500 hover:text-red-900 animate'>Remove</button> : <span className='self-center text-sm text-gray-500 ml-2'>Owner</span>}
+              </div>
+            )
+          })}
+        </div>
       </div>
-    </form>
+    </>
   )
 }

@@ -109,6 +109,7 @@ export type GetTeamByIdResult = {
     title: string,
     id: string,
     is_personal: boolean,
+    master: string
     docs: {
       id: string,
       title: string,
@@ -122,6 +123,7 @@ query($teamId: uuid!) {
   teams_by_pk(id: $teamId) {
     title,
     is_personal,
+    master,
     id,
     docs {
       id,
