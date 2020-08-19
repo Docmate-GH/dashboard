@@ -12,7 +12,7 @@ export default () => {
         <h1 className='mb-8 font-bold text-center text-lg'>
           Welcome to Docmate
         </h1>
-        {process.env.USE_OAUTH ? <SSO /> : (
+        {process.env.USE_OAUTH === 'true' ? <SSO /> : (
           <Switch>
             <Route path='/sign/in' component={SignIn} exact />
             <Route path='/sign/up' component={SignUp} exact />
