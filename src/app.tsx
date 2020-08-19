@@ -20,7 +20,7 @@ const App = () => {
     <Provider value={client} >
       <Router>
         <Switch>
-          <Route path='/sign' exact component={Sign}>
+          <Route path='/sign' component={Sign}>
           </Route>
           <Route path='/'>
             { userService.isLogin() ? <Home /> : <Redirect to='/sign' /> }

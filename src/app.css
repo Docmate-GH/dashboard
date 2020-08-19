@@ -24,6 +24,14 @@ form input[type='text'] {
   @apply bg-gray-50 animate rounded-lg px-2 py-2 text-sm;
 }
 
+form input[type="email"] {
+  @apply border-b border-blueGray-100 pb-2;
+}
+
+form input[type="password"] {
+  @apply border-b border-blueGray-100 pb-2;
+}
+
 form select {
   @apply bg-gray-50 animate rounded-lg px-2 py-2 text-sm;
 }

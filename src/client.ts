@@ -24,6 +24,7 @@ export const client = createClient({
 })
 
 export const httpClient = axios.create({
+  baseURL: 'http://localhost:3000',
   headers: {
     'Authorization': `Bearer ${userService.getToken()}`
   }
