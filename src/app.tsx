@@ -14,12 +14,14 @@ import { Provider } from 'urql'
 import { client } from './client'
 import Sign from './pages/Sign'
 import { userService } from './service'
+import Join from './pages/Join'
 
 const App = () => {
   return (
     <Provider value={client} >
       <Router>
         <Switch>
+        <Route path='/join/:inviteId' component={Join} exact />
           <Route path='/sign' component={Sign}>
           </Route>
           <Route path='/'>
