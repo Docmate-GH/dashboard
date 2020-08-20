@@ -365,7 +365,6 @@ function Settings(props: {
             default_page: values.defaultPage
           }
         })
-        setSaveStatus(SaveStatus.SAVED)
         biu('Save', { type: 'success' })
       } catch (e) {
         biu('Error', { type: 'danger' })
