@@ -57,6 +57,15 @@ export const useImportScript = (src: string) => {
   }
 }
 
+export enum SaveStatus {
+  UNSAVE,
+  SAVED
+}
+export let saveStatus = SaveStatus.SAVED
+export function setSaveStatus(status: SaveStatus) {
+  saveStatus = status
+}
+
 export const highlights = [
   "abap",
   "abnf",

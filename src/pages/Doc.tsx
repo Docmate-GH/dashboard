@@ -1,15 +1,15 @@
 import { useFormik } from 'formik'
 import * as React from 'react'
-import { Route, RouteComponentProps, Switch, useHistory, Link, RouteProps, Redirect } from 'react-router-dom'
+import { Route, RouteComponentProps, Switch, useHistory, Link, RouteProps, Redirect, Prompt } from 'react-router-dom'
 import { useMutation, useQuery } from 'urql'
 import { Lock, PlusIcon, SaveIcon, TrashIcon } from '../components/Icon'
 import { batchResortMutation, CreatePage, CreatePageResult, DeletePage, DeletePageParams, DeletePageResult, EditPage, EditPageParams, EditPageResult, GetDocById, GetDocByIdParams, GetDocByIdResult, GetPageByDocIdAndSlug, GetPageByDocIdAndSlugParams, GetPageByDocIdAndSlugResult, UpdateDoc, UpdateDocParams, UpdateDocResult } from '../gql'
 import classnames from 'classnames'
-import { highlights, setFieldValue, useImportScript } from '../utils'
+import { highlights, SaveStatus, setFieldValue, useImportScript } from '../utils'
 import biu from 'biu.js'
 import Select from 'react-select'
 import { DragDropContext, Draggable, Droppable } from 'react-beautiful-dnd'
-import { client } from '../client'
+import { client, httpClient } from '../client'
 import { nanoid } from 'nanoid'
 declare var process
 
@@ -82,81 +82,85 @@ export default (props: RouteComponentProps<{ docId: string }>) => {
 
   return (
 
-    <div className='border-r-2 border-gray-100 flex-1 h-full flex flex-col'>
-      <div className='bg-white px-8 py-4 flex justify-between border-b-2 border-gray-100'>
-        <div>
+    <>
+      <div className='border-r-2 border-gray-100 flex-1 h-full flex flex-col'>
+        <div className='bg-white px-8 py-4 flex justify-between border-b-2 border-gray-100'>
           <div>
-            <span className='cursor-pointer'><Link to={`/team/${doc.team.id}`}>{doc.team.title}</Link></span> / <span className='font-bold'><Link to={`/doc/${docId}`}>{doc.title}</Link></span>
-          </div>
+            <div>
+              <span className='cursor-pointer'><Link to={`/team/${doc.team.id}`}>{doc.team.title}</Link></span> / <span className='font-bold'><Link to={`/doc/${docId}`}>{doc.title}</Link></span>
+            </div>
 
-          <div className='text-xs mt-1 text-gray-500'>
-            { process.env.DOC_DOMAIN ? `${process.env.DOC_DOMAIN}/${doc.id}` : `${location.protocol}/${location.host}/${doc.id}` }
-          </div>
+            <div className='text-xs mt-1 text-gray-500'>
+              {process.env.DOC_DOMAIN ? `${process.env.DOC_DOMAIN}/${doc.id}` : `${location.protocol}/${location.host}/docs/${doc.id}`}
+            </div>
 
+          </div>
         </div>
-      </div>
 
-      <div className='flex flex-1'>
-        <div className='w-64 border-gray-50 pl-2'>
-          <h1 className='px-4 text-sm font-bold uppercase pt-4 text-blueGray-500'>
-            Document
+        <div className='flex flex-1'>
+          <div className='w-64 border-gray-50 pl-2'>
+            <h1 className='px-4 text-xs tracking-wide font-bold uppercase pt-4 text-blueGray-500'>
+              Document
           </h1>
 
-          <Link className={classnames('text-sm m-2 px-4 py-2 hover:bg-blueGray-50 cursor-pointer animate rounded block', { 'bg-blueGray-50': history.location.pathname.split('/').pop() === 'settings' })} to={`/doc/${doc.id}/settings`}>Settings</Link>
+            <Link className={classnames('text-sm w-full m-2 px-4 py-2 hover:bg-blueGray-50 cursor-pointer animate rounded block', { 'bg-blueGray-50': history.location.pathname.split('/').pop() === 'settings' })} to={`/doc/${doc.id}/settings`}>Settings</Link>
 
-          <h1 className='px-4 text-sm font-bold uppercase pt-4 text-blueGray-500 flex justify-between'>
-            Pages
-
-            <a className='cursor-pointer' onClick={onCreateNewPage}><PlusIcon /></a>
+            <h1 className='mb-4 px-4 text-xs font-bold tracking-wide uppercase pt-4 text-blueGray-500 flex justify-between'>
+              Pages
           </h1>
-          <DragDropContext onDragEnd={onDragEnd}>
-            <Droppable droppableId={doc.id}>
-              {provided => {
-                return (
-                  <>
-                    <nav ref={provided.innerRef} {...provided.droppableProps}>
-                      {doc.pages.map((page, index) => {
-                        return (
-                          <>
-                            <Draggable key={page.id} draggableId={page.id} index={index}>
-                              {provided => {
-                                return <Link {...provided.dragHandleProps} {...provided.draggableProps} ref={provided.innerRef} key={page.id} className={classnames('text-sm m-2 px-4 py-2 hover:bg-blueGray-50 cursor-pointer animate rounded block', { 'bg-blueGray-50': history.location.pathname.split('/').pop() === page.slug })} to={`/doc/${doc.id}/page/${page.slug}`}>{page.title}</Link>
-                              }}
-                            </Draggable>
-                          </>
-                        )
-                      })}
-                      {provided.placeholder}
-                    </nav>
-                  </>
-                )
-              }}
-            </Droppable>
-          </DragDropContext>
-        </div>
 
-        <div className='flex-1 h-full flex'>
-          <Switch>
-            <Route path='/doc/:docId/settings' exact>
-              <Settings doc={doc} />
-            </Route>
-            <Route path='/doc/:docId/page/:pageSlug' component={Editor} exact>
-            </Route>
-            <Route path='/doc/:docId' exact>
-              <Redirect to={`/doc/${doc.id}/settings`} />
-            </Route>
-          </Switch>
-        </div>
+            <DragDropContext onDragEnd={onDragEnd}>
+              <Droppable droppableId={doc.id}>
+                {provided => {
+                  return (
+                    <>
+                      <nav ref={provided.innerRef} {...provided.droppableProps}>
+                        {doc.pages.map((page, index) => {
+                          return (
+                            <>
+                              <Draggable key={page.id} draggableId={page.id} index={index}>
+                                {provided => {
+                                  return <Link {...provided.dragHandleProps} {...provided.draggableProps} ref={provided.innerRef} key={page.id} className={classnames('text-sm mx-2 w-full my-1 px-4 py-2 hover:bg-blueGray-50 cursor-pointer animate rounded block', { 'bg-blueGray-50': history.location.pathname.split('/').pop() === page.slug })} to={`/doc/${doc.id}/page/${page.slug}`}>{page.title}</Link>
+                                }}
+                              </Draggable>
+                            </>
+                          )
+                        })}
+                        {provided.placeholder}
+                      </nav>
+                    </>
+                  )
+                }}
+              </Droppable>
+            </DragDropContext>
 
-      </div>
-      {/* 
+            <button onClick={onCreateNewPage} className='focus:outline-none ml-2 hover:text-white hover:bg-blueGray-500 animate text-sm text-blueGray-500 font-bold border-2 border-blueGray-500 rounded-full w-full py-2 mt-4'>New page</button>
+
+          </div>
+
+          <div className='flex-1 h-full flex'>
+            <Switch>
+              <Route path='/doc/:docId/settings' exact>
+                <Settings doc={doc} />
+              </Route>
+              <Route path='/doc/:docId/page/:pageSlug' component={Editor} exact>
+              </Route>
+              <Route path='/doc/:docId' exact>
+                <Redirect to={`/doc/${doc.id}/settings`} />
+              </Route>
+            </Switch>
+          </div>
+
+        </div>
+        {/* 
       <Switch>
         <Route path='/doc/:docId/settings' exact>
           <Settings doc={doc} />
         </Route>
 
       </Switch> */}
-    </div>
+      </div>
+    </>
   )
 }
 
@@ -174,12 +178,13 @@ function Editor(props: RouteComponentProps<{ docId: string, pageSlug: string }>)
 
   const { docId, pageSlug } = props.match.params
 
+  const [saveStatus, setSaveStatus] = React.useState(SaveStatus.SAVED)
+
   const history = useHistory()
 
-  const [getPageByIdResult] = useQuery<GetPageByDocIdAndSlugResult, GetPageByDocIdAndSlugParams>({ query: GetPageByDocIdAndSlug, variables: { pageSlug, docId } })
+  const [getPageByIdResult, getPageById] = useQuery<GetPageByDocIdAndSlugResult, GetPageByDocIdAndSlugParams>({ query: GetPageByDocIdAndSlug, variables: { pageSlug, docId } })
   const [editPageResult, editPage] = useMutation<EditPageResult, EditPageParams>(EditPage)
   const [deletePageResult, deletePage] = useMutation<DeletePageResult, DeletePageParams>(DeletePage)
-
 
   const form = useFormik({
     enableReinitialize: true,
@@ -204,9 +209,10 @@ function Editor(props: RouteComponentProps<{ docId: string, pageSlug: string }>)
     }
   })
 
-  React.useLayoutEffect(() => {
-
-  }, [])
+  React.useEffect(() => {
+    setSaveStatus(SaveStatus.SAVED)
+    // todo close tab guard
+  }, [pageSlug])
 
   if (getPageByIdResult.fetching) {
     return <div>
@@ -233,10 +239,20 @@ function Editor(props: RouteComponentProps<{ docId: string, pageSlug: string }>)
 
   return (
     <>
+      <Prompt when={saveStatus === SaveStatus.UNSAVE} message={(location, action) => {
+        console.log(action)
+        return 'Are you sure you want to leave without saving?'
+      }} />
+
       <div className='p-4 flex flex-col w-full'>
         <input name='title' onChange={form.handleChange} className='outline-none w-full text-2xl font-bold' type="text" placeholder='Title' value={form.values.title} />
 
-        <CM value={form.values.content} />
+        <CM id={page.id} onChange={(value, changeObj) => {
+          form.setFieldValue('content', value)
+          if (changeObj.origin !== 'setValue') {
+            setSaveStatus(SaveStatus.UNSAVE)
+          }
+        }} value={page.content} />
       </div>
 
       <div className='w-16 border-l-2 border-gray-100'>
@@ -244,7 +260,7 @@ function Editor(props: RouteComponentProps<{ docId: string, pageSlug: string }>)
           <SaveIcon />
         </a>
 
-        <a onClick={_ => onClickDelete()} className='block bg-red-700 w-10 h-10 mx-auto rounded cursor-pointer hover:bg-red-900 animate mt-2 flex justify-center text-gray-100'>
+        <a onClick={_ => onClickDelete()} className='block bg-red-500 w-10 h-10 mx-auto rounded cursor-pointer hover:bg-red-900 animate mt-2 flex justify-center text-gray-100'>
           <TrashIcon />
         </a>
       </div>
@@ -252,31 +268,71 @@ function Editor(props: RouteComponentProps<{ docId: string, pageSlug: string }>)
   )
 }
 
+let imageIndex = 0
 declare var CodeMirror
-function CM(props: {
-  value
-}) {
+const CM = React.forwardRef((props: {
+  id: string,
+  value,
+  onChange: (value: string, changeObject) => void
+}, ref) => {
 
   const $el = React.useRef<HTMLDivElement>(null)
   const cm = React.useRef<any>(null)
 
   React.useEffect(() => {
     if (cm.current) {
-      cm.current.setValue(props.value || '')
+      cm.current.setValue(props.value);
+      cm.current.clearHistory();
     }
-  }, [props.value])
+  }, [props.id])
 
   React.useLayoutEffect(() => {
     cm.current = new CodeMirror($el.current, {
       mode: 'markdown',
       lineWrapping: true,
+      value: props.value || ''
+    })
+    cm.current.on('change', (c, change) => {
+      props.onChange(c.getValue(), change)
+    })
+
+    cm.current.on('paste', async (cm, e) => {
+      const file = e.clipboardData.files[0]
+      if (file && file.type.match('image/')) {
+        e.preventDefault()
+        // upload image
+
+        const formData = new FormData()
+        formData.append('image', file)
+
+        const appendText = (content: string) => {
+          cm.doc.replaceRange(content, cm.doc.sel.ranges[0].anchor)
+        }
+
+        const placeHolder = `{{ uploading... #${imageIndex++} }}`
+
+        try {
+          appendText(placeHolder)
+
+          const res = await httpClient.post('/api/v1/upload', formData)
+          const content = cm.getValue()
+          cm.setValue(content.replace(placeHolder, res.data.markdown))
+        } catch (e) {
+          if (e.response.data.code === 'NOT_PRO_MEMBER') {
+            // TODO: not pro member
+
+          }
+          const content = cm.getValue()
+          cm.setValue(content.replace(placeHolder, ''))
+        }
+      }
     })
   }, [])
 
   return (
     <div className='cursor-text flex-1 outline-none h-64 mt-4' ref={$el}></div>
   )
-}
+})
 
 const description = {
   docute: <span><a className='underline' href="https://docute.org" target="_blank">Docute</a> is a Vue-based document generator. It allows you to write Vue component in Markdown. </span>,
@@ -309,6 +365,7 @@ function Settings(props: {
             default_page: values.defaultPage
           }
         })
+        setSaveStatus(SaveStatus.SAVED)
         biu('Save', { type: 'success' })
       } catch (e) {
         biu('Error', { type: 'danger' })
