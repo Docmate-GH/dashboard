@@ -3,9 +3,15 @@ import * as React from 'react'
 import { httpClient } from '../client'
 import * as yup from 'yup'
 import { Redirect, Route, Switch, useHistory } from 'react-router-dom'
+import { userService } from '../service'
 
 declare var process
 export default () => {
+
+  if (userService.isLogin()) {
+    return <Redirect to='/' />
+  }
+
   return (
     <div className='h-full flex bg-gray-50 flex-col justify-center' >
       <div className='bg-white mx-auto rounded-lg shadow-xl p-8' style={{ width: '24rem' }}>
