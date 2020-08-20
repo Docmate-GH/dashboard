@@ -8,7 +8,7 @@ declare var process
 
 export const client = createClient({
   url: process.env.GQL_PATH || `http://${location.hostname}:8080/v1/graphql`,
-  requestPolicy: 'cache-first',
+  requestPolicy: 'cache-and-network',
   fetchOptions() {
 
     const headers = {}

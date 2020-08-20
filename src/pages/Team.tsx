@@ -32,6 +32,7 @@ export default (props: {
   }
 
   const newDocForm = useFormik({
+    enableReinitialize: true,
     initialValues: {
       title: '',
       teamId: teamId,
@@ -90,7 +91,7 @@ export default (props: {
                 <div className='flex'>
                   <div className='flex flex-col w-32 mr-4'>
                     <label htmlFor="team">Team</label>
-                    <select value={newDocForm.values.teamId} onChange={newDocForm.handleChange}>
+                    <select name="teamId" value={newDocForm.values.teamId} onChange={newDocForm.handleChange}>
                       {props.teams.map(team => {
                         return (
                           <option key={team.team.id} value={team.team.id}>{team.team.title}</option>

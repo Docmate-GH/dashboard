@@ -16,12 +16,36 @@ export function SettingsIcon() {
   return <svg viewBox="0 0 20 20" fill="currentColor" className="adjustments self-center w-5 h-5"><path d="M5 4a1 1 0 00-2 0v7.268a2 2 0 000 3.464V16a1 1 0 102 0v-1.268a2 2 0 000-3.464V4zM11 4a1 1 0 10-2 0v1.268a2 2 0 000 3.464V16a1 1 0 102 0V8.732a2 2 0 000-3.464V4zM16 3a1 1 0 011 1v7.268a2 2 0 010 3.464V16a1 1 0 11-2 0v-1.268a2 2 0 010-3.464V4a1 1 0 011-1z"></path></svg>
 }
 
-export function PlusIcon() {
-  return <svg viewBox="0 0 20 20" fill="currentColor" className="plus-circle self-center w-5 h-5"><path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm1-11a1 1 0 10-2 0v2H7a1 1 0 100 2h2v2a1 1 0 102 0v-2h2a1 1 0 100-2h-2V7z" clipRule="evenodd"></path></svg>
+export function PlusIcon({
+  className
+}: {
+  className?: string
+}) {
+  return <svg viewBox="0 0 20 20" fill="currentColor" className={"plus-circle self-center w-5 h-5".concat(className)}><path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm1-11a1 1 0 10-2 0v2H7a1 1 0 100 2h2v2a1 1 0 102 0v-2h2a1 1 0 100-2h-2V7z" clipRule="evenodd"></path></svg>
 }
 
-export function UserIcon() {
-  return <svg viewBox="0 0 20 20" fill="currentColor" className=" self-center user w-5 h-5"><path fillRule="evenodd" d="M10 9a3 3 0 100-6 3 3 0 000 6zm-7 9a7 7 0 1114 0H3z" clipRule="evenodd"></path></svg>
+export function PlusOnlyIcon({
+  className
+}: {
+  className?: string
+}) {
+  return <svg viewBox="0 0 20 20" fill="currentColor" className={"plus w-6 h-6".concat(className)}><path fillRule="evenodd" d="M10 5a1 1 0 011 1v3h3a1 1 0 110 2h-3v3a1 1 0 11-2 0v-3H6a1 1 0 110-2h3V6a1 1 0 011-1z" clipRule="evenodd"></path></svg>
+}
+
+export function UserIcon({
+  className
+}: {
+  className?: string
+}) {
+  return <svg viewBox="0 0 20 20" fill="currentColor" className={" self-center user w-5 h-5".concat(className || '')}><path fillRule="evenodd" d="M10 9a3 3 0 100-6 3 3 0 000 6zm-7 9a7 7 0 1114 0H3z" clipRule="evenodd"></path></svg>
+}
+
+export function UserGroup({
+  className
+}: {
+  className: string
+}) {
+  return <svg viewBox="0 0 20 20" fill="currentColor" className={"user-group w-6 h-6".concat(className)}><path d="M13 6a3 3 0 11-6 0 3 3 0 016 0zM18 8a2 2 0 11-4 0 2 2 0 014 0zM14 15a4 4 0 00-8 0v3h8v-3zM6 8a2 2 0 11-4 0 2 2 0 014 0zM16 18v-3a5.972 5.972 0 00-.75-2.906A3.005 3.005 0 0119 15v3h-3zM4.75 12.094A5.973 5.973 0 004 15v3H1v-3a3 3 0 013.75-2.906z"></path></svg>
 }
 
 export function Lock() {
