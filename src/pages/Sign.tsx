@@ -133,11 +133,11 @@ function SignIn() {
       <form onSubmit={form.handleSubmit}>
         <div className='flex flex-col'>
           <label htmlFor="email">Email</label>
-          <input className="focus:outline-none" type="email" placeholder="john@smith.com" />
+          <input value={form.values.email} onChange={form.handleChange} name="email" className="focus:outline-none" type="email" placeholder="john@example.com" />
         </div>
         <div className='flex flex-col mt-4'>
           <label htmlFor="password">Password</label>
-          <input className="focus:outline-none" type="password" placeholder="" />
+          <input name="password" value={form.values.password} onChange={form.handleChange} className="focus:outline-none" type="password" placeholder="" />
         </div>
 
         <div className='mt-8'>
