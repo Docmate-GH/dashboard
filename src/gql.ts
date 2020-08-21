@@ -147,6 +147,15 @@ export type GetDocByIdResult = {
       title: string,
       id: string
     },
+    directories: {
+      title: string,
+      id: string,
+      pages: {
+        slug: string,
+        title: string,
+        id: string
+      }[]
+    }[],
     default_page?: string
     template: string
     pages: {
@@ -161,7 +170,23 @@ query($docId: uuid!) {
   doc_by_pk(id: $docId) {
     visibility,
     code_highlights,
-    template
+    template,
+    directories {
+      id,
+      title,
+      pages(
+        order_by: [
+          {
+            index: asc
+          },
+          {
+            created_at: asc
+          }
+        ]
+      ) {
+        slug, title, id
+      }
+    },
     team {
       title, id
     }, default_page, 
@@ -174,8 +199,10 @@ query($docId: uuid!) {
           created_at: asc
         }
       ],
-      where: {
-        deleted_at: { _is_null: true }
+      where: { _or: [ 
+        {directory_id: { _is_null: true }}, 
+        {directory: { deleted_at: { _is_null: false } }} 
+        ] 
       }
     ) {
       slug, title, id
@@ -458,6 +485,26 @@ mutation($userId:uuid!, $input: users_set_input!) {
   update_users_by_pk(pk_columns:{
     id: $userId
   }, _set: $input) {
+    id
+  }
+}
+`
+
+export type CreateDirectoryParams = {
+  docId: string,
+  title: string
+}
+export type CreateDirectoryResult = {
+  insert_directory_one: {
+    id: string
+  }
+}
+export const CreateDirectory = `
+mutation($docId: uuid!, $title: String!) {
+  insert_directory_one(object: {
+    doc_id: $docId,
+    title: $title,
+  }) {
     id
   }
 }

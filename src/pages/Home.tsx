@@ -120,7 +120,7 @@ export default ({
           </form>
         </Modal>
 
-          <div className='w-64 border-r-2 border-gray-100'>
+          <div className='w-64 border-gray-100'>
             <div className='p-6 box-border'>
               <h1 className='logo text-2xl text-blueGray-900'>Docmate</h1>
               <h1 className='self-center'>Cloud</h1>

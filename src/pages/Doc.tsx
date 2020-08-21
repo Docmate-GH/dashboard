@@ -3,14 +3,15 @@ import * as React from 'react'
 import { Route, RouteComponentProps, Switch, useHistory, Link, RouteProps, Redirect, Prompt } from 'react-router-dom'
 import { useMutation, useQuery } from 'urql'
 import { Lock, PlusIcon, SaveIcon, TrashIcon } from '../components/Icon'
-import { batchResortMutation, CreatePage, CreatePageResult, DeletePage, DeletePageParams, DeletePageResult, EditPage, EditPageParams, EditPageResult, GetDocById, GetDocByIdParams, GetDocByIdResult, GetPageByDocIdAndSlug, GetPageByDocIdAndSlugParams, GetPageByDocIdAndSlugResult, UpdateDoc, UpdateDocParams, UpdateDocResult } from '../gql'
+import { batchResortMutation, CreateDirectory, CreateDirectoryParams, CreateDirectoryResult, CreatePage, CreatePageResult, DeletePage, DeletePageParams, DeletePageResult, EditPage, EditPageParams, EditPageResult, GetDocById, GetDocByIdParams, GetDocByIdResult, GetPageByDocIdAndSlug, GetPageByDocIdAndSlugParams, GetPageByDocIdAndSlugResult, UpdateDoc, UpdateDocParams, UpdateDocResult } from '../gql'
 import classnames from 'classnames'
 import { highlights, SaveStatus, setFieldValue, useImportScript } from '../utils'
 import biu from 'biu.js'
 import Select from 'react-select'
-import { DragDropContext, Draggable, Droppable } from 'react-beautiful-dnd'
+import { DragDropContext, Draggable, Droppable, DropResult } from 'react-beautiful-dnd'
 import { client, httpClient } from '../client'
 import { nanoid } from 'nanoid'
+import { DraggablePage, DroppableDirectory, DirectoryDroppablePannel } from '../components/PagesPannel'
 declare var process
 
 export default (props: RouteComponentProps<{ docId: string }>) => {
@@ -20,10 +21,14 @@ export default (props: RouteComponentProps<{ docId: string }>) => {
   const [getDocByIdResult] = useQuery<GetDocByIdResult, GetDocByIdParams>({ query: GetDocById, variables: { docId } })
   const [reOrderedPage, setReorderedPage] = React.useState(null as null | GetDocByIdResult['doc_by_pk']['pages'])
   const [createPageResult, createPage] = useMutation<CreatePageResult>(CreatePage)
+  const [createDirectoryResult, createDirecotry] = useMutation<CreateDirectoryResult, CreateDirectoryParams>(CreateDirectory)
 
+  const [reOrderedCache, setReorderedCache] = React.useState<null | {
+    directories: GetDocByIdResult['doc_by_pk']['directories'],
+    pages: GetDocByIdResult['doc_by_pk']['pages']
+  }>(null)
 
   const history = useHistory()
-
 
   if (getDocByIdResult.error) {
     return <div>
@@ -38,6 +43,10 @@ export default (props: RouteComponentProps<{ docId: string }>) => {
   }
 
   const doc = getDocByIdResult.data!.doc_by_pk
+
+  doc.directories = reOrderedCache ? reOrderedCache.directories : doc.directories
+  doc.pages = reOrderedCache ? reOrderedCache.pages : doc.pages
+
 
   async function onDragEnd(result) {
     if (!result.destination) {
@@ -80,11 +89,106 @@ export default (props: RouteComponentProps<{ docId: string }>) => {
     }
   }
 
+  async function onCrateNewDirectory() {
+    const title = window.prompt('Directory title')
+    if (title) {
+      try {
+        const res = await createDirecotry({
+          title,
+          docId,
+        })
+      } catch (e) {
+        console.log(e)
+      }
+    }
+  }
+
+  async function newDragend(result: DropResult) {
+
+    if (!result.destination) {
+      return
+    }
+
+    if (
+      result.destination.droppableId === result.source.droppableId &&
+      result.destination.index === result.source.index
+    ) {
+      return
+    }
+
+    if (result.type === 'page') {
+      const targetDirectoryId = result.destination.droppableId
+      const pageId = result.draggableId
+      const originDirectoryId = result.source.droppableId
+      const originIndex = result.source.index
+      const targetIndex = result.destination.index
+
+      const pagesCopy = [...doc.pages]
+      const directoriesCopy = [...doc.directories]
+
+      const targetDirectory = directoriesCopy.find(item => item.id === targetDirectoryId)!
+      const originDirectory = directoriesCopy.find(item => item.id === originDirectoryId)!
+
+      let originPage: GetDocByIdResult['doc_by_pk']['directories'][0]['pages'][0]
+
+      if (targetDirectoryId === originDirectoryId) {
+        // only exchange index
+        originPage = targetDirectory.pages.find(item => item.id === pageId)!
+        targetDirectory.pages.splice(originIndex, 1)
+        targetDirectory.pages.splice(targetIndex, 0, originPage)
+      } else {
+        // remove from origin
+        if (originDirectoryId === '__DOCMATE__') {
+          // move from unorganized directories
+          pagesCopy.splice(originIndex, 1)
+          originPage = doc.pages.find(item => item.id === pageId)!
+        } else {
+          originPage = originDirectory.pages.splice(originIndex, 1)[0]
+        }
+
+        // append to target
+        targetDirectory.pages.splice(targetIndex, 0, originPage)
+      }
+
+      setReorderedCache({
+        directories: directoriesCopy,
+        pages: pagesCopy
+      })
+    } else if (result.type === 'directory') {
+      const directoriesCopy = [...doc.directories]
+      const originIndex = result.source.index
+      const targetIndex = result.destination.index
+
+      const temp = directoriesCopy[targetIndex]
+      directoriesCopy[targetIndex] = directoriesCopy[originIndex]
+      directoriesCopy[originIndex] = temp
+
+      setReorderedCache({
+        directories: directoriesCopy,
+        pages: doc.pages
+      })
+    }
+
+    // const changeDirectoryResult = await client.mutation(`
+    // mutation ($pageId: uuid!, $directoryId:uuid!) {
+    //   update_page_by_pk(pk_columns: {  id: $pageId}, _set: {
+    //     directory_id: $directoryId
+    //   }) {
+    //     id
+    //   }
+    // }`, {
+    //   pageId,
+    //   directoryId
+    // }).toPromise()
+
+    // console.log(changeDirectoryResult)
+  }
+
   return (
 
     <>
-      <div className='border-r-2 border-gray-100 flex-1 h-full flex flex-col'>
-        <div className='bg-white px-8 py-4 flex justify-between border-b-2 border-gray-100'>
+      <div className='border-gray-100 flex-1 h-full flex flex-col'>
+        <div className='bg-white px-4 py-4 flex justify-between border-b border-gray-100'>
           <div>
             <div>
               <span className='cursor-pointer'><Link to={`/team/${doc.team.id}`}>{doc.team.title}</Link></span> / <span className='font-bold'><Link to={`/doc/${docId}`}>{doc.title}</Link></span>
@@ -98,47 +202,57 @@ export default (props: RouteComponentProps<{ docId: string }>) => {
         </div>
 
         <div className='flex flex-1'>
-          <div className='w-64 border-gray-50 pl-2'>
+          <div className='w-64 border-gray-50 pl-2 pr-2 bg-white'>
             <h1 className='px-4 text-xs tracking-wide font-bold uppercase pt-4 text-blueGray-500'>
               Document
-          </h1>
+            </h1>
 
-            <Link className={classnames('text-sm w-full m-2 px-4 py-2 hover:bg-blueGray-50 cursor-pointer animate rounded block', { 'bg-blueGray-50': history.location.pathname.split('/').pop() === 'settings' })} to={`/doc/${doc.id}/settings`}>Settings</Link>
+            <Link className={classnames('text-sm w-full mt-2 px-4 py-2 hover:bg-blueGray-50 cursor-pointer animate rounded block', { 'bg-blueGray-50': history.location.pathname.split('/').pop() === 'settings' })} to={`/doc/${doc.id}/settings`}>Settings</Link>
 
-            <h1 className='mb-4 px-4 text-xs font-bold tracking-wide uppercase pt-4 text-blueGray-500 flex justify-between'>
+            <h1 className='mb-4 px-4 text-xs font-bold tracking-wide uppercase mt-8 text-blueGray-500 flex justify-between'>
               Pages
-          </h1>
+            </h1>
 
-            <DragDropContext onDragEnd={onDragEnd}>
-              <Droppable droppableId={doc.id}>
-                {provided => {
-                  return (
-                    <>
-                      <nav ref={provided.innerRef} {...provided.droppableProps}>
-                        {doc.pages.map((page, index) => {
-                          return (
-                            <>
-                              <Draggable key={page.id} draggableId={page.id} index={index}>
-                                {provided => {
-                                  return <Link {...provided.dragHandleProps} {...provided.draggableProps} ref={provided.innerRef} key={page.id} className={classnames('text-sm mx-2 w-full my-1 px-4 py-2 hover:bg-blueGray-50 cursor-pointer animate rounded block', { 'bg-blueGray-50': history.location.pathname.split('/').pop() === page.slug })} to={`/doc/${doc.id}/page/${page.slug}`}>{page.title}</Link>
-                                }}
-                              </Draggable>
-                            </>
-                          )
+            <div className='flex -mx-2'>
+              {/* <button onClick={onCreateNewPage} className='mx-2 focus:outline-none hover:text-white hover:bg-blueGray-500 animate text-sm text-blueGray-500 font-bold border-2 border-blueGray-500 rounded-full w-full py-1 mt-4'>New page</button>
+              <button onClick={onCrateNewDirectory} className='mx-2 focus:outline-none hover:text-white hover:bg-blueGray-500 animate text-sm text-blueGray-500 font-bold border-2 border-blueGray-500 rounded-full w-full py-1 mt-4'>New Directory</button> */}
+            </div>
+
+            <div style={{ overflow: 'scroll' }}>
+              <DragDropContext onDragEnd={newDragend}>
+                <DirectoryDroppablePannel>
+
+                  {doc.pages.length > 0 && <div className='px-2 bg-gray-50 py-2 mb-4'>
+                    <h1 className='text-blueGray-500 mb-2 tracking-wide text-sm ml-2'>Unorganized Pages</h1>
+                    <Droppable isDropDisabled={true} droppableId='__DOCMATE__' type='page'>
+                      {(provided, snapshot) => {
+                        return (
+                          <div ref={provided.innerRef} className={classnames('w-full rounded', { 'bg-red-50': snapshot.isDraggingOver })} style={{ minHeight: '8rem' }} {...provided.droppableProps}>
+                            {doc.pages.map((page, pageIndex) => {
+                              return <DraggablePage key={page.id} index={pageIndex} pageId={page.id} title={<Link className='hover:text-blueGray-500' to={`/doc/${doc.id}/page/${page.slug}`} >{page.title}</Link>} />
+                            })}
+                            {provided.placeholder}
+                          </div>
+                        )
+                      }}
+                    </Droppable>
+                  </div>}
+
+                  {doc.directories.map((directory, index) => {
+                    return (
+                      <DroppableDirectory key={directory.id} index={index} directoryName={directory.title} directoryId={directory.id}>
+                        {directory.pages.map((page, pageIndex) => {
+                          return <DraggablePage key={page.id} index={pageIndex} pageId={page.id} title={page.title} />
                         })}
-                        {provided.placeholder}
-                      </nav>
-                    </>
-                  )
-                }}
-              </Droppable>
-            </DragDropContext>
-
-            <button onClick={onCreateNewPage} className='focus:outline-none ml-2 hover:text-white hover:bg-blueGray-500 animate text-sm text-blueGray-500 font-bold border-2 border-blueGray-500 rounded-full w-full py-2 mt-4'>New page</button>
-
+                      </DroppableDirectory>
+                    )
+                  })}
+                </DirectoryDroppablePannel>
+              </DragDropContext>
+            </div>
           </div>
 
-          <div className='flex-1 h-full flex'>
+          <div className='flex-1 h-full flex bg-white'>
             <Switch>
               <Route path='/doc/:docId/settings' exact>
                 <Settings doc={doc} />
