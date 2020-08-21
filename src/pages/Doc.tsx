@@ -278,7 +278,7 @@ export default (props: RouteComponentProps<{ docId: string }>) => {
                     return (
                       <DroppableDirectory key={directory.id} index={index} directoryName={directory.title} directoryId={directory.id}>
                         {directory.pages.map((page, pageIndex) => {
-                          return <DraggablePage key={page.id} index={pageIndex} pageId={page.id} title={page.title} />
+                          return <DraggablePage key={page.id} index={pageIndex} pageId={page.id} title={<Link className='hover:text-blueGray-500' to={`/doc/${doc.id}/page/${page.slug}`} >{page.title}</Link>} />
                         })}
                       </DroppableDirectory>
                     )
