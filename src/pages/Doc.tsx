@@ -3,7 +3,7 @@ import * as React from 'react'
 import { Route, RouteComponentProps, Switch, useHistory, Link, RouteProps, Redirect, Prompt } from 'react-router-dom'
 import { useMutation, useQuery } from 'urql'
 import { Lock, PlusIcon, SaveIcon, TrashIcon } from '../components/Icon'
-import { batchResortMutation, CreateDirectory, CreateDirectoryParams, CreateDirectoryResult, CreatePage, CreatePageResult, DeletePage, DeletePageParams, DeletePageResult, EditPage, EditPageParams, EditPageResult, GetDocById, GetDocByIdParams, GetDocByIdResult, GetPageByDocIdAndSlug, GetPageByDocIdAndSlugParams, GetPageByDocIdAndSlugResult, UpdateDoc, UpdateDocParams, UpdateDocResult } from '../gql'
+import { batchResortDirectoriesMutation, batchResortPagesMutation, CreateDirectory, CreateDirectoryParams, CreateDirectoryResult, CreatePage, CreatePageResult, DeletePage, DeletePageParams, DeletePageResult, EditPage, EditPageParams, EditPageResult, GetDocById, GetDocByIdParams, GetDocByIdResult, GetPageByDocIdAndSlug, GetPageByDocIdAndSlugParams, GetPageByDocIdAndSlugResult, UpdateDoc, UpdateDocParams, UpdateDocResult, UpdatePageById, UpdatePageByIdParams, UpdatePageByIdResult } from '../gql'
 import classnames from 'classnames'
 import { highlights, SaveStatus, setFieldValue, useImportScript } from '../utils'
 import biu from 'biu.js'
@@ -65,7 +65,7 @@ export default (props: RouteComponentProps<{ docId: string }>) => {
     pages.splice(result.source.index, 1)
     pages.splice(result.destination.index, 0, p!)
 
-    const resortMutation = batchResortMutation(pages.map(page => page.id))
+    const resortMutation = batchResortPagesMutation(pages.map(page => page.id))
 
     setReorderedPage(pages)
 
@@ -136,6 +136,17 @@ export default (props: RouteComponentProps<{ docId: string }>) => {
         originPage = targetDirectory.pages.find(item => item.id === pageId)!
         targetDirectory.pages.splice(originIndex, 1)
         targetDirectory.pages.splice(targetIndex, 0, originPage)
+
+        setReorderedCache({
+          directories: directoriesCopy,
+          pages: pagesCopy
+        })
+
+        const resortResult = await client.mutation(batchResortPagesMutation(targetDirectory.pages.map(page => page.id))).toPromise()
+
+        if (!resortResult.error) {
+          biu('Saved')
+        }
       } else {
         // remove from origin
         if (originDirectoryId === '__DOCMATE__') {
@@ -148,25 +159,50 @@ export default (props: RouteComponentProps<{ docId: string }>) => {
 
         // append to target
         targetDirectory.pages.splice(targetIndex, 0, originPage)
+
+
+        setReorderedCache({
+          directories: directoriesCopy,
+          pages: pagesCopy
+        })
+
+        // change parent directory id
+        const updateResult = await client.mutation<UpdatePageByIdResult, UpdatePageByIdParams>(UpdatePageById, {
+          pageId,
+          input: {
+            directory_id: targetDirectory.id
+          }
+        }).toPromise()
+
+        // resort target and resort pages' index
+        const resortOriginResult = await client.mutation(batchResortPagesMutation(originDirectory.pages.map(page => page.id))).toPromise()
+        const resortTargetResult = await client.mutation(batchResortPagesMutation(targetDirectory.pages.map(page => page.id))).toPromise()
+
+        if (!resortOriginResult.error && !resortTargetResult.error && !updateResult.error) {
+          biu('Pages order saved')
+        }
       }
 
-      setReorderedCache({
-        directories: directoriesCopy,
-        pages: pagesCopy
-      })
     } else if (result.type === 'directory') {
       const directoriesCopy = [...doc.directories]
       const originIndex = result.source.index
       const targetIndex = result.destination.index
 
-      const temp = directoriesCopy[targetIndex]
-      directoriesCopy[targetIndex] = directoriesCopy[originIndex]
-      directoriesCopy[originIndex] = temp
+      const moved = directoriesCopy.splice(originIndex, 1)[0]
+      directoriesCopy.splice(targetIndex, 0, moved)
 
       setReorderedCache({
         directories: directoriesCopy,
         pages: doc.pages
       })
+
+      console.log(batchResortDirectoriesMutation(directoriesCopy.map(directory => directory.id)))
+      const resortResult = await client.mutation(batchResortDirectoriesMutation(directoriesCopy.map(directory => directory.id))).toPromise()
+      
+      if (!resortResult.error)  {
+        biu('Directories order saved')
+      }
+
     }
 
     // const changeDirectoryResult = await client.mutation(`

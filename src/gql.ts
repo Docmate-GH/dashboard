@@ -171,7 +171,9 @@ query($docId: uuid!) {
     visibility,
     code_highlights,
     template,
-    directories {
+    directories(order_by:{
+      index: asc
+    }) {
       id,
       title,
       pages(
@@ -232,7 +234,7 @@ export type UpdateDocParams = {
     default_page?: string,
     code_highlights?: string[],
     template?: string
-    visibility: 'private' | 'public'
+    visibility?: 'private' | 'public'
   }
 }
 export type UpdateDocResult = {
@@ -392,7 +394,7 @@ query($docId: uuid!, $pageSlug: String!) {
 }
 `
 
-export const batchResortMutation = (ids: Array<string>) => {
+export const batchResortPagesMutation = (ids: Array<string>) => {
 
   return `
       mutation {
@@ -409,12 +411,50 @@ export const batchResortMutation = (ids: Array<string>) => {
       `
 }
 
+export const batchResortDirectoriesMutation = (ids: Array<string>) => {
+
+  return `
+      mutation {
+        ${ids.map((id, index) => {
+          return `
+            update_${index}: update_directory_by_pk(pk_columns: {id: "${id}"}, _set:{
+              index: ${index}
+            }) {
+              index
+            }
+          `
+        }).join('\n')}
+      }      
+      `
+}
+
+
+export type UpdatePageByIdParams = {
+  pageId: string,
+  input: {
+    directory_id?: string,
+    index?: number
+  }
+}
+export type UpdatePageByIdResult = {
+  update_page_by_pk: {
+    id: string
+  }
+}
+export const UpdatePageById = `
+mutation ($pageId: uuid!, $input: page_set_input) {
+  update_page_by_pk(pk_columns: {id: $pageId}, _set: $input) {
+    id
+  }
+}
+`
+
 export type EditPageParams = {
   docId: string,
   pageSlug: string,
   input: {
-    title: string,
-    content: string
+    title?: string,
+    content?: string,
   }
 }
 export type EditPageResult = {
