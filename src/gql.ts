@@ -213,16 +213,27 @@ query($docId: uuid!) {
 }
 `
 
+export type CreatePageParams = {
+  object: {
+    doc_id: string,
+    content?: string,
+    title?: string,
+    directory_id?: string
+    index?: number,
+    slug: string,
+  }
+}
 export type CreatePageResult = {
   insert_page_one: {
     id: string,
     slug: string,
+    title: string
   }
 }
 export const CreatePage = `
 mutation ($object: page_insert_input!) {
   insert_page_one(object: $object) {
-    id, slug
+    id, slug, title
   }
 }
 `
@@ -429,6 +440,22 @@ export const batchResortDirectoriesMutation = (ids: Array<string>) => {
 }
 
 
+export type EditDirectoryParams = {
+  directoryId: string,
+  input: {
+    title?: string,
+    deleted_at?: Date
+  }
+}
+export const EditDirectory = `
+mutation ($directoryId: uuid!, $input: directory_set_input!) {
+  update_directory_by_pk(pk_columns: {id: $directoryId}, _set: $input) {
+    id
+  }
+}
+`
+
+
 export type UpdatePageByIdParams = {
   pageId: string,
   input: {
@@ -547,5 +574,11 @@ mutation($docId: uuid!, $title: String!) {
   }) {
     id
   }
+}
+`
+
+export const RemoveDirectory = `
+mutation ($directoryId: uuid!) {
+  update_directory
 }
 `

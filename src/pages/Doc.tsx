@@ -2,8 +2,8 @@ import { useFormik } from 'formik'
 import * as React from 'react'
 import { Route, RouteComponentProps, Switch, useHistory, Link, RouteProps, Redirect, Prompt } from 'react-router-dom'
 import { useMutation, useQuery } from 'urql'
-import { Lock, PlusIcon, SaveIcon, TrashIcon } from '../components/Icon'
-import { batchResortDirectoriesMutation, batchResortPagesMutation, CreateDirectory, CreateDirectoryParams, CreateDirectoryResult, CreatePage, CreatePageResult, DeletePage, DeletePageParams, DeletePageResult, EditPage, EditPageParams, EditPageResult, GetDocById, GetDocByIdParams, GetDocByIdResult, GetPageByDocIdAndSlug, GetPageByDocIdAndSlugParams, GetPageByDocIdAndSlugResult, UpdateDoc, UpdateDocParams, UpdateDocResult, UpdatePageById, UpdatePageByIdParams, UpdatePageByIdResult } from '../gql'
+import { Lock, PlusIcon, SaveIcon, SettingsIcon, TrashIcon } from '../components/Icon'
+import { batchResortDirectoriesMutation, batchResortPagesMutation, CreateDirectory, CreateDirectoryParams, CreateDirectoryResult, CreatePage, CreatePageParams, CreatePageResult, DeletePage, DeletePageParams, DeletePageResult, EditDirectory, EditDirectoryParams, EditPage, EditPageParams, EditPageResult, GetDocById, GetDocByIdParams, GetDocByIdResult, GetPageByDocIdAndSlug, GetPageByDocIdAndSlugParams, GetPageByDocIdAndSlugResult, UpdateDoc, UpdateDocParams, UpdateDocResult, UpdatePageById, UpdatePageByIdParams, UpdatePageByIdResult } from '../gql'
 import classnames from 'classnames'
 import { highlights, SaveStatus, setFieldValue, useImportScript } from '../utils'
 import biu from 'biu.js'
@@ -19,14 +19,9 @@ export default (props: RouteComponentProps<{ docId: string }>) => {
   const docId = props.match.params.docId
 
   const [getDocByIdResult] = useQuery<GetDocByIdResult, GetDocByIdParams>({ query: GetDocById, variables: { docId } })
-  const [reOrderedPage, setReorderedPage] = React.useState(null as null | GetDocByIdResult['doc_by_pk']['pages'])
   const [createPageResult, createPage] = useMutation<CreatePageResult>(CreatePage)
-  const [createDirectoryResult, createDirecotry] = useMutation<CreateDirectoryResult, CreateDirectoryParams>(CreateDirectory)
 
-  const [reOrderedCache, setReorderedCache] = React.useState<null | {
-    directories: GetDocByIdResult['doc_by_pk']['directories'],
-    pages: GetDocByIdResult['doc_by_pk']['pages']
-  }>(null)
+
 
   const history = useHistory()
 
@@ -44,38 +39,6 @@ export default (props: RouteComponentProps<{ docId: string }>) => {
 
   const doc = getDocByIdResult.data!.doc_by_pk
 
-  doc.directories = reOrderedCache ? reOrderedCache.directories : doc.directories
-  doc.pages = reOrderedCache ? reOrderedCache.pages : doc.pages
-
-
-  async function onDragEnd(result) {
-    if (!result.destination) {
-      return
-    }
-
-    if (
-      result.destination.droppableId === result.source.droppableId &&
-      result.destination.index === result.source.index
-    ) {
-      return
-    }
-
-    const pages = Array.from(doc.pages)
-    const p = pages.find(page => page.id === result.draggableId)
-    pages.splice(result.source.index, 1)
-    pages.splice(result.destination.index, 0, p!)
-
-    const resortMutation = batchResortPagesMutation(pages.map(page => page.id))
-
-    setReorderedPage(pages)
-
-    const resortResult = await client.mutation(resortMutation).toPromise()
-
-    if (resortResult.error) {
-      // TODO: resort error
-    }
-  }
-
   async function onCreateNewPage() {
     const res = await createPage({
       object: {
@@ -89,19 +52,76 @@ export default (props: RouteComponentProps<{ docId: string }>) => {
     }
   }
 
-  async function onCrateNewDirectory() {
-    const title = window.prompt('Directory title')
-    if (title) {
-      try {
-        const res = await createDirecotry({
-          title,
-          docId,
-        })
-      } catch (e) {
-        console.log(e)
-      }
-    }
-  }
+  const openDocUrl = process.env.DOC_DOMAIN ? `${process.env.DOC_DOMAIN}/${doc.id}` : `${location.protocol}/${location.host}/docs/${doc.id}`
+
+  return (
+
+    <>
+      <div className='border-gray-100 flex-1 h-full flex flex-col'>
+        <div className='bg-white px-4 py-4 flex justify-between border-b border-gray-100'>
+          <div>
+            <div>
+              <span className='cursor-pointer'><Link to={`/team/${doc.team.id}`}>{doc.team.title}</Link></span> / <span className='font-bold'><Link to={`/doc/${docId}`}>{doc.title}</Link></span>
+            </div>
+
+            <div className='text-xs mt-1 text-gray-500'>
+              <a href={openDocUrl} target="_blank">{openDocUrl}</a>
+            </div>
+
+          </div>
+
+          <div className='self-center'>
+            <button onClick={_ => history.push(`/doc/${doc.id}/settings`)} className='flex rounded-full text-sm tracking-wide py-1 px-4 text-blueGray-500 border-2 border-blueGray-500 font-bold hover:bg-blueGray-500 hover:text-white animate'>
+              {/* <SettingsIcon/> */}
+              Settings
+            </button>
+          </div>
+
+        </div>
+
+        <div className='flex flex-1'>
+
+          <div className='flex-1 h-full flex bg-white'>
+            <Switch>
+              <Route path='/doc/:docId/settings' exact>
+                <Settings doc={doc} />
+              </Route>
+              <Route path='/doc/:docId'>
+                <Doc doc={doc} />
+              </Route>
+            </Switch>
+          </div>
+
+        </div>
+        {/* 
+      <Switch>
+        <Route path='/doc/:docId/settings' exact>
+          <Settings doc={doc} />
+        </Route>
+
+      </Switch> */}
+      </div>
+    </>
+  )
+}
+
+function Doc({
+  doc
+}: {
+  doc: GetDocByIdResult['doc_by_pk']
+}) {
+  const [createDirectoryResult, createDirecotry] = useMutation<CreateDirectoryResult, CreateDirectoryParams>(CreateDirectory)
+  const [reOrderedPage, setReorderedPage] = React.useState(null as null | GetDocByIdResult['doc_by_pk']['pages'])
+
+  const [reOrderedCache, setReorderedCache] = React.useState<null | {
+    directories: GetDocByIdResult['doc_by_pk']['directories'],
+    pages: GetDocByIdResult['doc_by_pk']['pages']
+  }>(null)
+
+  const history = useHistory()
+
+  doc.directories = reOrderedCache ? reOrderedCache.directories : doc.directories
+  doc.pages = reOrderedCache ? reOrderedCache.pages : doc.pages
 
   async function newDragend(result: DropResult) {
 
@@ -146,6 +166,7 @@ export default (props: RouteComponentProps<{ docId: string }>) => {
 
         if (!resortResult.error) {
           biu('Saved')
+          setReorderedCache(null)
         }
       } else {
         // remove from origin
@@ -180,6 +201,8 @@ export default (props: RouteComponentProps<{ docId: string }>) => {
 
         if (!resortOriginResult.error && !resortTargetResult.error && !updateResult.error) {
           biu('Pages order saved')
+
+          setReorderedCache(null)
         }
       }
 
@@ -198,119 +221,158 @@ export default (props: RouteComponentProps<{ docId: string }>) => {
 
       console.log(batchResortDirectoriesMutation(directoriesCopy.map(directory => directory.id)))
       const resortResult = await client.mutation(batchResortDirectoriesMutation(directoriesCopy.map(directory => directory.id))).toPromise()
-      
-      if (!resortResult.error)  {
+
+      if (!resortResult.error) {
         biu('Directories order saved')
+        setReorderedCache(null)
       }
 
     }
+  }
 
-    // const changeDirectoryResult = await client.mutation(`
-    // mutation ($pageId: uuid!, $directoryId:uuid!) {
-    //   update_page_by_pk(pk_columns: {  id: $pageId}, _set: {
-    //     directory_id: $directoryId
-    //   }) {
-    //     id
-    //   }
-    // }`, {
-    //   pageId,
-    //   directoryId
-    // }).toPromise()
+  async function onEditDirectory(directoryId: string, input: EditDirectoryParams['input']) {
+    const result = await client.mutation<{}, EditDirectoryParams>(EditDirectory, {
+      directoryId,
+      input
+    }).toPromise()
 
-    // console.log(changeDirectoryResult)
+    if (!result.error) {
+      biu('Update success')
+    }
+  }
+
+
+  async function onCrateNewDirectory() {
+    const title = window.prompt('Directory title')
+    if (title) {
+      try {
+        const res = await createDirecotry({
+          title,
+          docId: doc.id,
+        })
+      } catch (e) {
+        console.log(e)
+      }
+    }
+  }
+
+  async function onClickRemoveDirectory(directoryId: string) {
+    if (window.confirm('Are you sure to delete this directory?')) {
+      const result = await client.mutation<{}, EditDirectoryParams>(EditDirectory, {
+        directoryId,
+        input: {
+          deleted_at: new Date()
+        }
+      }).toPromise()
+      if (!result.error) {
+        biu('Delete success')
+      }
+    }
+  }
+
+  async function onCreateNewPage(directoryId: string) {
+    const result = await client.mutation<CreatePageResult, CreatePageParams>(CreatePage, {
+      object: {
+        doc_id: doc.id,
+        content: '',
+        slug: nanoid(8),
+        directory_id: directoryId
+      }
+    }).toPromise()
+
+    // if (!result.error) {
+    //   const directoriesCopy = [...doc.directories]
+    //   const directory = doc.directories.find(d => d.id === directoryId)!
+    //   console.log(result.data)
+    //   directory.pages.unshift({
+    //     slug: result.data!.insert_page_one.slug,
+    //     id: result.data!.insert_page_one.id,
+    //     title: result.data!.insert_page_one.title
+    //   })
+
+    //   setReorderedCache({
+    //     directories: directoriesCopy,
+    //     pages: doc.pages
+    //   })
+
+
+    //   biu('Create page success')
+    // }
+
+    history.push(`/doc/${doc.id}/page/${result.data!.insert_page_one.slug}`)
+
   }
 
   return (
-
     <>
-      <div className='border-gray-100 flex-1 h-full flex flex-col'>
-        <div className='bg-white px-4 py-4 flex justify-between border-b border-gray-100'>
-          <div>
-            <div>
-              <span className='cursor-pointer'><Link to={`/team/${doc.team.id}`}>{doc.team.title}</Link></span> / <span className='font-bold'><Link to={`/doc/${docId}`}>{doc.title}</Link></span>
-            </div>
+      <div className='w-64 border-gray-50 pl-2 pr-2 bg-white'>
+        {/* <h1 className='px-4 text-xs tracking-wide font-bold uppercase pt-4 text-blueGray-500'>
+      Document
+    </h1>
 
-            <div className='text-xs mt-1 text-gray-500'>
-              {process.env.DOC_DOMAIN ? `${process.env.DOC_DOMAIN}/${doc.id}` : `${location.protocol}/${location.host}/docs/${doc.id}`}
-            </div>
+    <Link className={classnames('text-sm w-full mt-2 px-4 py-2 hover:bg-blueGray-50 cursor-pointer animate rounded block', { 'bg-blueGray-50': history.location.pathname.split('/').pop() === 'settings' })} to={`/doc/${doc.id}/settings`}>Settings</Link> */}
+        {/* 
+    <h1 className='mb-4 px-4 text-xs font-bold tracking-wide uppercase mt-8 text-blueGray-500 flex justify-between'>
+      Directories
+    </h1> */}
 
-          </div>
+        <div className='mb-4 mt-4'>
+          <button onClick={onCrateNewDirectory} className='flex justify-center py-2 hover:bg-blueGray-700 animate rounded text-sm bg-blueGray-500 text-white font-bold w-full'><PlusIcon />
+            <span className='ml-1'>Add Directory</span>
+          </button>
         </div>
 
-        <div className='flex flex-1'>
-          <div className='w-64 border-gray-50 pl-2 pr-2 bg-white'>
-            <h1 className='px-4 text-xs tracking-wide font-bold uppercase pt-4 text-blueGray-500'>
-              Document
-            </h1>
+        <div style={{ overflow: 'scroll' }}>
+          <DragDropContext onDragEnd={newDragend}>
+            <DirectoryDroppablePannel>
 
-            <Link className={classnames('text-sm w-full mt-2 px-4 py-2 hover:bg-blueGray-50 cursor-pointer animate rounded block', { 'bg-blueGray-50': history.location.pathname.split('/').pop() === 'settings' })} to={`/doc/${doc.id}/settings`}>Settings</Link>
-
-            <h1 className='mb-4 px-4 text-xs font-bold tracking-wide uppercase mt-8 text-blueGray-500 flex justify-between'>
-              Pages
-            </h1>
-
-            <div className='flex -mx-2'>
-              {/* <button onClick={onCreateNewPage} className='mx-2 focus:outline-none hover:text-white hover:bg-blueGray-500 animate text-sm text-blueGray-500 font-bold border-2 border-blueGray-500 rounded-full w-full py-1 mt-4'>New page</button>
-              <button onClick={onCrateNewDirectory} className='mx-2 focus:outline-none hover:text-white hover:bg-blueGray-500 animate text-sm text-blueGray-500 font-bold border-2 border-blueGray-500 rounded-full w-full py-1 mt-4'>New Directory</button> */}
-            </div>
-
-            <div style={{ overflow: 'scroll' }}>
-              <DragDropContext onDragEnd={newDragend}>
-                <DirectoryDroppablePannel>
-
-                  {doc.pages.length > 0 && <div className='px-2 bg-gray-50 py-2 mb-4'>
-                    <h1 className='text-blueGray-500 mb-2 tracking-wide text-sm ml-2'>Unorganized Pages</h1>
-                    <Droppable isDropDisabled={true} droppableId='__DOCMATE__' type='page'>
-                      {(provided, snapshot) => {
-                        return (
-                          <div ref={provided.innerRef} className={classnames('w-full rounded', { 'bg-red-50': snapshot.isDraggingOver })} style={{ minHeight: '8rem' }} {...provided.droppableProps}>
-                            {doc.pages.map((page, pageIndex) => {
-                              return <DraggablePage key={page.id} index={pageIndex} pageId={page.id} title={<Link className='hover:text-blueGray-500' to={`/doc/${doc.id}/page/${page.slug}`} >{page.title}</Link>} />
-                            })}
-                            {provided.placeholder}
-                          </div>
-                        )
-                      }}
-                    </Droppable>
-                  </div>}
-
-                  {doc.directories.map((directory, index) => {
+              {doc.pages.length > 0 && <div className='px-2 bg-gray-50 py-2 mb-4'>
+                <h1 className='text-blueGray-500 mb-2 tracking-wide text-sm ml-2'>Unorganized Pages</h1>
+                <Droppable isDropDisabled={true} droppableId='__DOCMATE__' type='page'>
+                  {(provided, snapshot) => {
                     return (
-                      <DroppableDirectory key={directory.id} index={index} directoryName={directory.title} directoryId={directory.id}>
-                        {directory.pages.map((page, pageIndex) => {
+                      <div ref={provided.innerRef} className={classnames('w-full rounded', { 'bg-red-50': snapshot.isDraggingOver })} style={{ minHeight: '8rem' }} {...provided.droppableProps}>
+                        {doc.pages.map((page, pageIndex) => {
                           return <DraggablePage key={page.id} index={pageIndex} pageId={page.id} title={<Link className='hover:text-blueGray-500' to={`/doc/${doc.id}/page/${page.slug}`} >{page.title}</Link>} />
                         })}
-                      </DroppableDirectory>
+                        {provided.placeholder}
+                      </div>
                     )
-                  })}
-                </DirectoryDroppablePannel>
-              </DragDropContext>
-            </div>
-          </div>
+                  }}
+                </Droppable>
+              </div>}
 
-          <div className='flex-1 h-full flex bg-white'>
-            <Switch>
-              <Route path='/doc/:docId/settings' exact>
-                <Settings doc={doc} />
-              </Route>
-              <Route path='/doc/:docId/page/:pageSlug' component={Editor} exact>
-              </Route>
-              <Route path='/doc/:docId' exact>
-                <Redirect to={`/doc/${doc.id}/settings`} />
-              </Route>
-            </Switch>
-          </div>
-
+              {doc.directories.map((directory, index) => {
+                return (
+                  <DroppableDirectory onClickEdit={() => {
+                    const newTitle = window.prompt('Rename the directory title to', directory.title)
+                    if (newTitle) {
+                      onEditDirectory(directory.id, {
+                        title: newTitle
+                      })
+                    }
+                  }} onClickPlus={() => {
+                    onCreateNewPage(directory.id)
+                  }} onClickRemove={() => {
+                    onClickRemoveDirectory(directory.id)
+                  }} key={directory.id} index={index} directoryName={directory.title} directoryId={directory.id}>
+                    {directory.pages.map((page, pageIndex) => {
+                      return <DraggablePage key={page.id} index={pageIndex} pageId={page.id} title={<Link className='hover:text-blueGray-500' to={`/doc/${doc.id}/page/${page.slug}`} >{page.title}</Link>} />
+                    })}
+                  </DroppableDirectory>
+                )
+              })}
+            </DirectoryDroppablePannel>
+          </DragDropContext>
         </div>
-        {/* 
-      <Switch>
-        <Route path='/doc/:docId/settings' exact>
-          <Settings doc={doc} />
-        </Route>
+      </div>
 
-      </Switch> */}
+      <div className='flex-1 flex'>
+        <Route path='/doc/:docId/page/:pageSlug' component={Editor} exact>
+        </Route>
       </div>
     </>
+
   )
 }
 
@@ -403,16 +465,18 @@ function Editor(props: RouteComponentProps<{ docId: string, pageSlug: string }>)
             setSaveStatus(SaveStatus.UNSAVE)
           }
         }} value={page.content} />
-      </div>
 
-      <div className='w-16 border-l-2 border-gray-100'>
-        <a onClick={form.submitForm} className='block bg-blueGray-500 w-10 h-10 mx-auto rounded cursor-pointer hover:bg-blueGray-700 animate mt-2 flex justify-center text-gray-100'>
-          <SaveIcon />
-        </a>
 
-        <a onClick={_ => onClickDelete()} className='block bg-red-500 w-10 h-10 mx-auto rounded cursor-pointer hover:bg-red-900 animate mt-2 flex justify-center text-gray-100'>
-          <TrashIcon />
-        </a>
+
+        <div className='w-16  border-gray-100 mt-2 flex'>
+          <a onClick={form.submitForm} className='px-4 py-1 block bg-blueGray-900 rounded-full mr-2 text-sm font-bold tracking-wide cursor-pointer hover:bg-blueGray-500 animate mt-2 flex justify-center text-white'>
+            Save
+          </a>
+
+          <a onClick={_ => onClickDelete()} className='px-4 py-1 block rounded-full mr-2 text-sm font-bold tracking-wide block bg-red-900 rounded cursor-pointer hover:bg-red-500 animate mt-2 flex justify-center text-gray-100'>
+            Delete
+          </a>
+        </div>
       </div>
     </>
   )
@@ -440,7 +504,7 @@ const CM = React.forwardRef((props: {
     cm.current = new CodeMirror($el.current, {
       mode: 'markdown',
       lineWrapping: true,
-      value: props.value || ''
+      value: props.value || '',
     })
     cm.current.on('change', (c, change) => {
       props.onChange(c.getValue(), change)
@@ -480,7 +544,7 @@ const CM = React.forwardRef((props: {
   }, [])
 
   return (
-    <div className='cursor-text flex-1 outline-none h-64 mt-4' ref={$el}></div>
+    <div className='cursor-text flex-1 outline-none mt-4 border border-gray-100' ref={$el}></div>
   )
 })
 
@@ -523,19 +587,26 @@ function Settings(props: {
   })
 
   return (
-    <div className='px-8 py-4 w-full'>
+    <div className='px-4 py-4 w-full'>
+      <h1 className='font-bold mb-4'>Settings</h1>
       <form>
-        <div className='flex flex-col'>
+        <div className='flex flex-col w-64'>
           <label htmlFor="title">Document Title</label>
           <input onChange={form.handleChange} name='title' value={form.values.title} type="text" />
         </div>
 
-        <div className='flex flex-col mt-8'>
+        <div className='flex flex-col mt-8 w-64'>
           <label htmlFor="title">Home Page</label>
           <select name="defaultPage" value={form.values.defaultPage} onChange={form.handleChange}>
-            {props.doc.pages.map(page => {
+            {props.doc.directories.map(directory => {
               return (
-                <option value={page.slug} key={page.id}>{page.title}</option>
+                <optgroup key={directory.id} label={directory.title}>
+                  {directory.pages.map(page => {
+                    return (
+                      <option value={page.slug} key={page.id}>{page.title}</option>
+                    )
+                  })}
+                </optgroup>
               )
             })}
           </select>
@@ -546,7 +617,7 @@ function Settings(props: {
           <Select onChange={setFieldValue(form, 'highlights')} isMulti value={form.values.highlights} options={highlights} />
         </div>
 
-        <div className='flex flex-col mt-8'>
+        <div className='flex flex-col mt-8 w-64'>
           <label htmlFor="visibility">Visibility</label>
           <select name='visibility' value={form.values.visibility} onChange={form.handleChange}>
             <option value="public">Public</option>
