@@ -44,7 +44,7 @@ export default ({
   const [getUserTeamsResult, getUserTeams] = useQuery<GetUserTeamsResult, GetUserTeamParams>({ query: GetUserTeams, variables: { userId: userService.getUserInfo()?.id }, pause: !userService.isLogin() })
   const history = useHistory()
   const [currentTeamId, setCurrentTeamId] = React.useState<string | null>(null)
-  const [ createTeamModalVisible, setCreateTeamModalVisible ] = React.useState(false)
+  const [createTeamModalVisible, setCreateTeamModalVisible] = React.useState(false)
   const [createTeamResult, createTeam] = useMutation<CreateTeamResult, CreateTeamParams>(CreateTeam)
 
   function matchTeamId(pathname: string) {
@@ -120,65 +120,66 @@ export default ({
           </form>
         </Modal>
 
-          <div className='w-64 border-gray-100'>
-            <div className='p-6 box-border'>
-              <h1 className='logo text-2xl text-blueGray-900'>Docmate</h1>
-              <h1 className='self-center'>Cloud</h1>
-            </div>
-
-            <nav className='p-6 flex flex-col justify-between'>
-              <div>
-                <div onClick={_ => setCreateTeamModalVisible(true)} className='flex justify-between px-4 bg-blueGray-500 hover:bg-blueGray-700 text-white font-bold animate text-center text-sm mb-4  py-2  rounded  cursor-pointer'>
-                  <span className='mr-2'>Create new team</span>
-                  <PlusOnlyIcon className='w-5 h-5 self-center' />
-                </div>
-                <NavItem title='Teams'>
-                  {teams.map(team => {
-                    let selected = currentTeamId === team.team.id
-                    return (
-                      <Link key={team.team.id}
-                        className={classnames('flex text-sm mb-2 pl-2 py-2 rounded block text-gray-500 hover:text-blueGray-900 hover:bg-blueGray-50 cursor-pointer transition-all duration-200', { 'bg-blueGray-50': selected, 'text-blueGray-900': selected })}
-                        to={`/team/${team.team.id}`}>
-                        {team.team.is_personal ? <UserIcon className='w-4 h-4 ' /> : <UserGroup className='w-4 h-4  self-center' />}<span className='ml-2 tracking-wide'>{team.team.title}</span>
-                      </Link>
-                    )
-                  })}
-                </NavItem>
-
-              </div>
-
-              <div>
-
-              </div>
-            </nav>
-
-            <div className='flex text-blueGray-900 px-6 cursor-pointer' onClick={_ => history.push('/me')}>
-              {/* <Link className='block' to='/me'> */}
-              <div className='mr-2 pt-1'>
-                <img className='rounded block w-8 h-8' src={userService.getUserInfo()?.avatar} alt="avatar" />
-              </div>
-              <div className=''>
-                <div className='text-sm'>{userService.getUserInfo()?.username}</div>
-
-                <div className='text-xs text-gray-500'>
-                  Free
-              </div>
-              </div>
-              {/* </Link> */}
-            </div>
+        <div className='w-64 border-gray-100'>
+          <div className='p-6 box-border'>
+            <h1 className='logo text-2xl text-blueGray-900'>Docmate</h1>
+            <h1 className='self-center'>Cloud</h1>
           </div>
 
-          <Switch>
-            <Route path='/me' exact component={Me} />
-            <Route path='/team/:teamId'>
-              <Team teams={teams} />
-            </Route>
-            <Route path='/doc/:docId' component={Doc}>
-            </Route>
-            <Route path='/' exact>
-              <Redirect to={`/team/${teams[0].team.id}`} />
-            </Route>
-          </Switch>
+          <nav className='p-6 flex flex-col justify-between'>
+            <div>
+              <div onClick={_ => setCreateTeamModalVisible(true)} className='flex hover:text-blueGray-900 text-blueGray-500 font-bold animate text-center text-sm mb-4  py-2  rounded  cursor-pointer'>
+                <PlusOnlyIcon className='w-5 h-5 self-center' />
+
+                <span className='mr-2'>Create new team</span>
+              </div>
+              <NavItem title='Teams'>
+                {teams.map(team => {
+                  let selected = currentTeamId === team.team.id
+                  return (
+                    <Link key={team.team.id}
+                      className={classnames('flex text-sm mb-2 pl-2 py-2 rounded block text-gray-500 hover:text-blueGray-900 hover:bg-blueGray-50 cursor-pointer transition-all duration-200', { 'bg-blueGray-50': selected, 'text-blueGray-900': selected })}
+                      to={`/team/${team.team.id}`}>
+                      {team.team.is_personal ? <UserIcon className='w-4 h-4 ' /> : <UserGroup className='w-4 h-4  self-center' />}<span className='ml-2 tracking-wide'>{team.team.title}</span>
+                    </Link>
+                  )
+                })}
+              </NavItem>
+
+            </div>
+
+            <div>
+
+            </div>
+          </nav>
+
+          <div className='flex text-blueGray-900 px-6 cursor-pointer' onClick={_ => history.push('/me')}>
+            {/* <Link className='block' to='/me'> */}
+            <div className='mr-2 pt-1'>
+              <img className='rounded block w-8 h-8' src={userService.getUserInfo()?.avatar} alt="avatar" />
+            </div>
+            <div className=''>
+              <div className='text-sm'>{userService.getUserInfo()?.username}</div>
+
+              <div className='text-xs text-gray-500'>
+                Free
+              </div>
+            </div>
+            {/* </Link> */}
+          </div>
+        </div>
+
+        <Switch>
+          <Route path='/me' exact component={Me} />
+          <Route path='/team/:teamId'>
+            <Team teams={teams} />
+          </Route>
+          <Route path='/doc/:docId' component={Doc}>
+          </Route>
+          <Route path='/' exact>
+            <Redirect to={`/team/${teams[0].team.id}`} />
+          </Route>
+        </Switch>
       </div>
     )
   }
