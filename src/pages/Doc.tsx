@@ -18,10 +18,7 @@ export default (props: RouteComponentProps<{ docId: string }>) => {
 
   const docId = props.match.params.docId
 
-  const [getDocByIdResult] = useQuery<GetDocByIdResult, GetDocByIdParams>({ query: GetDocById, variables: { docId } })
-  const [createPageResult, createPage] = useMutation<CreatePageResult>(CreatePage)
-
-
+  const [getDocByIdResult, getDocById] = useQuery<GetDocByIdResult, GetDocByIdParams>({ query: GetDocById, variables: { docId } })
 
   const history = useHistory()
 
@@ -38,19 +35,6 @@ export default (props: RouteComponentProps<{ docId: string }>) => {
   }
 
   const doc = getDocByIdResult.data!.doc_by_pk
-
-  async function onCreateNewPage() {
-    const res = await createPage({
-      object: {
-        doc_id: docId,
-        slug: nanoid(8),
-        content: ''
-      }
-    })
-    if (res.data) {
-      history.push(`/doc/${docId}/page/${res.data.insert_page_one.slug}`)
-    }
-  }
 
   const openDocUrl = process.env.DOC_DOMAIN ? `${process.env.DOC_DOMAIN}/${doc.id}` : `${location.protocol}/${location.host}/docs/${doc.id}`
 
@@ -87,7 +71,7 @@ export default (props: RouteComponentProps<{ docId: string }>) => {
                 <Settings doc={doc} />
               </Route>
               <Route path='/doc/:docId'>
-                <Doc doc={doc} />
+                <Doc doc={doc} refresh={getDocById} />
               </Route>
             </Switch>
           </div>
@@ -106,12 +90,13 @@ export default (props: RouteComponentProps<{ docId: string }>) => {
 }
 
 function Doc({
-  doc
+  doc,
+  refresh
 }: {
+  refresh: () => void
   doc: GetDocByIdResult['doc_by_pk']
 }) {
   const [createDirectoryResult, createDirecotry] = useMutation<CreateDirectoryResult, CreateDirectoryParams>(CreateDirectory)
-  const [reOrderedPage, setReorderedPage] = React.useState(null as null | GetDocByIdResult['doc_by_pk']['pages'])
 
   const [reOrderedCache, setReorderedCache] = React.useState<null | {
     directories: GetDocByIdResult['doc_by_pk']['directories'],
@@ -246,10 +231,14 @@ function Doc({
     const title = window.prompt('Directory title')
     if (title) {
       try {
-        const res = await createDirecotry({
+        const res = await client.mutation<CreateDirectoryResult, CreateDirectoryParams>(CreateDirectory, {
           title,
-          docId: doc.id,
-        })
+          docId: doc.id
+        }).toPromise()
+
+        if (!res.error) {
+          refresh()
+        }
       } catch (e) {
         console.log(e)
       }
@@ -280,42 +269,13 @@ function Doc({
       }
     }).toPromise()
 
-    // if (!result.error) {
-    //   const directoriesCopy = [...doc.directories]
-    //   const directory = doc.directories.find(d => d.id === directoryId)!
-    //   console.log(result.data)
-    //   directory.pages.unshift({
-    //     slug: result.data!.insert_page_one.slug,
-    //     id: result.data!.insert_page_one.id,
-    //     title: result.data!.insert_page_one.title
-    //   })
-
-    //   setReorderedCache({
-    //     directories: directoriesCopy,
-    //     pages: doc.pages
-    //   })
-
-
-    //   biu('Create page success')
-    // }
-
     history.push(`/doc/${doc.id}/page/${result.data!.insert_page_one.slug}`)
-
+    refresh()
   }
 
   return (
     <>
       <div className='w-64 border-gray-50 pl-2 pr-2 bg-white'>
-        {/* <h1 className='px-4 text-xs tracking-wide font-bold uppercase pt-4 text-blueGray-500'>
-      Document
-    </h1>
-
-    <Link className={classnames('text-sm w-full mt-2 px-4 py-2 hover:bg-blueGray-50 cursor-pointer animate rounded block', { 'bg-blueGray-50': history.location.pathname.split('/').pop() === 'settings' })} to={`/doc/${doc.id}/settings`}>Settings</Link> */}
-        {/* 
-    <h1 className='mb-4 px-4 text-xs font-bold tracking-wide uppercase mt-8 text-blueGray-500 flex justify-between'>
-      Directories
-    </h1> */}
-
         <div className='mb-4 mt-4'>
           <button onClick={onCrateNewDirectory} className='flex justify-center py-2 hover:bg-blueGray-700 animate rounded text-sm bg-blueGray-500 text-white font-bold w-full'><PlusIcon />
             <span className='ml-1'>Add Directory</span>
@@ -368,7 +328,7 @@ function Doc({
       </div>
 
       <div className='flex-1 flex'>
-        <Route path='/doc/:docId/page/:pageSlug' component={Editor} exact>
+        <Route path='/doc/:docId/page/:pageSlug' render={props => <Editor {...props} refresh={refresh} />} exact>
         </Route>
       </div>
     </>
@@ -386,7 +346,7 @@ function Doc({
 //   )
 // }
 
-function Editor(props: RouteComponentProps<{ docId: string, pageSlug: string }>) {
+function Editor(props: RouteComponentProps<{ docId: string, pageSlug: string }> & { refresh: () => void }) {
 
   const { docId, pageSlug } = props.match.params
 
