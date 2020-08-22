@@ -469,11 +469,11 @@ function Editor(props: RouteComponentProps<{ docId: string, pageSlug: string }>)
 
 
         <div className='w-16  border-gray-100 mt-2 flex'>
-          <a onClick={form.submitForm} className='px-4 py-1 block bg-blueGray-900 rounded-full mr-2 text-sm font-bold tracking-wide cursor-pointer hover:bg-blueGray-500 animate mt-2 flex justify-center text-white'>
+          <a onClick={form.submitForm} className='px-4 py-1 block bg-blueGray-500 rounded-full mr-2 text-sm font-bold tracking-wide cursor-pointer hover:bg-blueGray-900 animate mt-2 flex justify-center text-white'>
             Save
           </a>
 
-          <a onClick={_ => onClickDelete()} className='px-4 py-1 block rounded-full mr-2 text-sm font-bold tracking-wide block bg-red-900 rounded cursor-pointer hover:bg-red-500 animate mt-2 flex justify-center text-gray-100'>
+          <a onClick={_ => onClickDelete()} className='px-4 py-1 block rounded-full mr-2 text-sm font-bold tracking-wide block bg-red-500 rounded cursor-pointer hover:bg-red-900 animate mt-2 flex justify-center text-gray-100'>
             Delete
           </a>
         </div>
@@ -544,7 +544,7 @@ const CM = React.forwardRef((props: {
   }, [])
 
   return (
-    <div className='cursor-text flex-1 outline-none mt-4 border border-gray-100' ref={$el}></div>
+    <div className='cursor-text outline-none mt-4 border border-gray-100' ref={$el}></div>
   )
 })
 
