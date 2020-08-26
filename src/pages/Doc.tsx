@@ -36,7 +36,7 @@ export default (props: RouteComponentProps<{ docId: string }>) => {
 
   const doc = getDocByIdResult.data!.doc_by_pk
 
-  const openDocUrl = process.env.DOC_DOMAIN ? `${process.env.DOC_DOMAIN}/${doc.id}` : `${location.protocol}/${location.host}/docs/${doc.id}`
+  const openDocUrl = process.env.DOC_DOMAIN ? `${process.env.DOC_DOMAIN}/${doc.id}` : `${location.protocol}//${location.host}/docs/${doc.id}`
 
   return (
 
