@@ -13,7 +13,7 @@ export default () => {
   }
 
   return (
-    <div className='h-full flex bg-gray-50 flex-col justify-center' >
+    <div className='h-screen flex bg-gray-50 flex-col justify-center' >
       <div className='bg-white mx-auto rounded-lg shadow-xl p-8' style={{ width: '24rem' }}>
         <h1 className='mb-8 font-bold text-center text-lg'>
           Welcome to Docmate
